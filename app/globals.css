@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafaf8;
+  --foreground: #17130f;
+
+  --color-brand-blue: #2563eb;
+  --color-brand-blue-deep: #1e3a8a;
+  --color-brand-blue-light: #60a5fa;
+  --color-brand-brown: #6b4423;
+  --color-brand-brown-dark: #4a3728;
+  --color-brand-cream: #fafaf8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-blue: var(--color-brand-blue);
+  --color-brand-blue-deep: var(--color-brand-blue-deep);
+  --color-brand-blue-light: var(--color-brand-blue-light);
+  --color-brand-brown: var(--color-brand-brown);
+  --color-brand-brown-dark: var(--color-brand-brown-dark);
+  --color-brand-cream: var(--color-brand-cream);
+  --font-poppins: var(--font-poppins);
+  --animate-marquee: marquee 30s linear infinite;
+  --animate-marquee-fast: marquee 16s linear infinite;
+  --animate-blob: blob 18s ease-in-out infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(4%, -6%) scale(1.08);
+  }
+  66% {
+    transform: translate(-3%, 5%) scale(0.95);
+  }
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom cursor: only enabled on fine-pointer devices via JS toggling this class */
+html.has-custom-cursor,
+html.has-custom-cursor * {
+  cursor: none !important;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--color-brand-blue-deep);
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0 0 0.5rem 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

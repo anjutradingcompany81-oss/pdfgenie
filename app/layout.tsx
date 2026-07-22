@@ -1,0 +1,43 @@
+import type { Metadata } from "next";
+import { Poppins } from "next/font/google";
+import "./globals.css";
+import { SmoothScroll } from "@/components/layout/SmoothScroll";
+import { Cursor } from "@/components/layout/Cursor";
+import { Preloader } from "@/components/layout/Preloader";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+export const metadata: Metadata = {
+  title: "PDF Genie — Every PDF task, one calm tool",
+  description:
+    "Merge, split, compress, convert, and sign PDFs in seconds. No installs, no watermarks.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className={`${poppins.variable} antialiased`}>
+      <body className="bg-brand-cream text-foreground">
+        <a href="#top" className="skip-link">
+          Skip to content
+        </a>
+        <Preloader />
+        <Cursor />
+        <SmoothScroll>
+          <Navbar />
+          <main>{children}</main>
+          <Footer />
+        </SmoothScroll>
+      </body>
+    </html>
+  );
+}
