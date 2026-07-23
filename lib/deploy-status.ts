@@ -9,7 +9,11 @@ export type DeployStatus = {
   updatedAt?: string;
 };
 
-const STATUS_FILE = path.join(process.cwd(), ".deploy-status.json");
+// process.cwd() is NOT the project root here — Next's standalone server.js
+// chdir's to .next/standalone at startup. Use the explicit env var set in
+// ecosystem.config.js instead.
+const PROJECT_ROOT = process.env.PROJECT_ROOT || process.cwd();
+const STATUS_FILE = path.join(PROJECT_ROOT, ".deploy-status.json");
 
 export function readDeployStatus(): DeployStatus {
   try {

@@ -15,17 +15,25 @@ export async function POST() {
     return NextResponse.json({ error: "A deploy is already running" }, { status: 409 });
   }
 
-  const scriptPath = path.join(process.cwd(), "scripts", "deploy-admin.sh");
+  // process.cwd() is NOT the project root here — Next's standalone server.js
+  // chdir's to .next/standalone at startup. Use the explicit env var set in
+  // ecosystem.config.js instead.
+  const projectRoot = process.env.PROJECT_ROOT;
+  if (!projectRoot) {
+    return NextResponse.json({ error: "PROJECT_ROOT is not configured" }, { status: 500 });
+  }
+
+  const scriptPath = path.join(projectRoot, "scripts", "deploy-admin.sh");
   if (!fs.existsSync(scriptPath)) {
     return NextResponse.json({ error: "Deploy script not found" }, { status: 500 });
   }
 
   writeDeployStatus({ state: "running", message: "Deploy queued…" });
 
-  const logFd = fs.openSync(path.join(process.cwd(), ".deploy-log.txt"), "w");
+  const logFd = fs.openSync(path.join(projectRoot, ".deploy-log.txt"), "w");
 
   const child = spawn("bash", [scriptPath], {
-    cwd: process.cwd(),
+    cwd: projectRoot,
     detached: true,
     stdio: ["ignore", logFd, logFd],
   });

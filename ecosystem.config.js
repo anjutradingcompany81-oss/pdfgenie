@@ -17,6 +17,11 @@ module.exports = {
         NODE_ENV: "production",
         PORT: 3000,
         HOSTNAME: "127.0.0.1",
+        // Next's standalone server.js chdir's to its own directory
+        // (.next/standalone) at startup, so process.cwd() inside the running
+        // app is NOT the project root. Anything that needs the real project
+        // root (the admin deploy trigger, status file) must use this instead.
+        PROJECT_ROOT: __dirname,
         ...secrets,
       },
     },
