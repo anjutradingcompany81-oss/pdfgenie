@@ -164,6 +164,14 @@ export default function MailMergePage() {
 
           <div>
             <StepLabel n={2}>Upload recipient list (Excel or CSV, needs an &quot;Email&quot; column)</StepLabel>
+            <a
+              href="/samples/mail-merge-template.xlsx"
+              download
+              className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue-deep hover:underline"
+            >
+              <Download size={14} />
+              Download sample Excel template
+            </a>
             {!excelFile && (
               <Dropzone
                 accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
