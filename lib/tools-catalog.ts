@@ -156,7 +156,7 @@ export const CONVERT_TOOLS: Tool[] = [
     href: "/tools/word-to-pdf",
     icon: FileUp,
     title: "Word to PDF",
-    copy: "Turn a .doc or .docx file into a PDF.",
+    copy: "Turn a .docx file into a PDF.",
   },
   {
     href: "/tools/pdf-to-word",
