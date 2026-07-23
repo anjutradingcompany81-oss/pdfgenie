@@ -10,6 +10,11 @@ import { loginSchema } from "@/lib/auth-schemas";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  // Required behind a reverse proxy (Nginx) — without this Auth.js can't
+  // verify the incoming Host header is legitimate and refuses every
+  // request with an UntrustedHost error. NEXTAUTH_URL is already set to
+  // the real origin, so this isn't opening up host-header spoofing.
+  trustHost: true,
   // A Credentials provider requires the "jwt" session strategy — Auth.js
   // does not support database sessions alongside it.
   // NOTE: "remember me" on the login form is currently cosmetic — every
