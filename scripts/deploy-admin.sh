@@ -1,10 +1,12 @@
 #!/bin/bash
 # Triggered by the admin "Update website" button (see app/api/admin/deploy/route.ts).
-# Pulls the latest reviewed code from GitHub main, rebuilds, and restarts PM2.
+# Builds whatever code is currently checked out in the work tree and restarts PM2.
+# Getting new code into the work tree is a separate step (git push production main) —
+# this script deliberately does not touch git, so it can't fight over the "main" ref
+# with the push-to-deploy hook.
 set -e
 
 WORK_TREE="$(cd "$(dirname "$0")/.." && pwd)"
-BARE_REPO="${PDFGENIE_BARE_REPO:-/root/pdfgenie.git}"
 STATUS_FILE="$WORK_TREE/.deploy-status.json"
 LOG_FILE="$WORK_TREE/.deploy-log.txt"
 
@@ -20,10 +22,6 @@ write_status() {
 trap 'write_status "error" "Deploy failed. Check .deploy-log.txt for details."' ERR
 
 cd "$WORK_TREE"
-
-write_status "running" "Fetching latest code from GitHub"
-GIT_DIR="$BARE_REPO" GIT_WORK_TREE="$WORK_TREE" git fetch github main
-GIT_DIR="$BARE_REPO" GIT_WORK_TREE="$WORK_TREE" git reset --hard github/main
 
 write_status "running" "Installing dependencies"
 npm install --no-audit --no-fund
