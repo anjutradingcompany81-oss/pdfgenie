@@ -51,7 +51,7 @@ export async function getJobLogRows(jobId: string): Promise<{ job: { attachmentC
       cc: r.cc || "",
       bcc: r.bcc || "",
       subject: job.subject,
-      attachmentName: job.attachmentCount > 0 ? `${job.attachmentCount} file(s)` : "",
+      attachmentName: r.attachmentNames || "",
       pdfPasswordUsed: pdfPassword ? "••••••" : "",
       deliveryStatus: r.status,
       smtpResponse: r.smtpResponse || "",

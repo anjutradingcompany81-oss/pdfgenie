@@ -2,6 +2,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/db";
 import { getTransport as getDefaultTransport, getFromAddress } from "@/lib/email";
 import { renderTemplate, findField } from "@/lib/mail-merge/render-template";
+import { resolveRecipientAttachmentNames } from "@/lib/mail-merge/resolve-attachments";
 import { recordUsage, getUsageToday, type UsageIdentifier } from "@/lib/usage-tracking";
 import { PLAN_LIMITS, type PlanKey } from "@/lib/plans/config";
 import type { Recipient } from "@/lib/mail-merge/parse-recipients";
@@ -132,6 +133,8 @@ export async function validateAndSend(input: SendJobInput): Promise<SendJobResul
   });
 
   const { transport, from } = buildTransport(input.smtpConfig);
+  const attachmentByName = new Map(input.attachments.map((a) => [a.filename, a]));
+  const uploadedFilenames = input.attachments.map((a) => a.filename);
   let sent = 0;
   let failed = 0;
 
@@ -144,6 +147,22 @@ export async function validateAndSend(input: SendJobInput): Promise<SendJobResul
     const cc = findField(recipient.fields, "cc") || undefined;
     const bcc = findField(recipient.fields, "bcc") || undefined;
 
+    const { matched, missing } = resolveRecipientAttachmentNames(recipient.fields, uploadedFilenames);
+    const attachmentNames = matched.length > 0 ? matched.join(", ") : null;
+
+    if (missing.length > 0) {
+      await prisma.mailMergeRecipient.update({
+        where: { id: recipientRow.id },
+        data: {
+          status: "FAILED",
+          error: `Attachment not found among uploaded files: ${missing.join(", ")}`,
+          attachmentNames,
+        },
+      });
+      failed++;
+      continue;
+    }
+
     try {
       let smtpResponse: string | null = null;
       if (transport) {
@@ -154,7 +173,10 @@ export async function validateAndSend(input: SendJobInput): Promise<SendJobResul
           bcc,
           subject,
           html,
-          attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })),
+          attachments: matched.map((name) => {
+            const a = attachmentByName.get(name)!;
+            return { filename: a.filename, content: a.content };
+          }),
         });
         smtpResponse = info.response ?? null;
       }
@@ -163,13 +185,13 @@ export async function validateAndSend(input: SendJobInput): Promise<SendJobResul
       // flag, surfaced to the caller so the UI can be honest about it.
       await prisma.mailMergeRecipient.update({
         where: { id: recipientRow.id },
-        data: { status: "SENT", sentAt: new Date(), smtpResponse },
+        data: { status: "SENT", sentAt: new Date(), smtpResponse, attachmentNames },
       });
       sent++;
     } catch (err) {
       await prisma.mailMergeRecipient.update({
         where: { id: recipientRow.id },
-        data: { status: "FAILED", error: err instanceof Error ? err.message : "Unknown error" },
+        data: { status: "FAILED", error: err instanceof Error ? err.message : "Unknown error", attachmentNames },
       });
       failed++;
     }

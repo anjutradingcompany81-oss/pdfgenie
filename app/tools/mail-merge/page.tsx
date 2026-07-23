@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Mail, Loader2, Sparkles, FileText, Lock, History, Download } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ToolShell } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
@@ -14,6 +14,7 @@ import { SmtpConfigForm, EMPTY_SMTP_CONFIG, type SmtpConfigState } from "@/compo
 import { RichTextEditor } from "@/components/mail-merge/RichTextEditor";
 import { TemplateLibrary } from "@/components/mail-merge/TemplateLibrary";
 import { EmailPreview } from "@/components/mail-merge/EmailPreview";
+import { resolveRecipientAttachmentNames } from "@/lib/mail-merge/resolve-attachments";
 
 type Recipient = { email: string; fields: Record<string, string> };
 
@@ -57,6 +58,18 @@ export default function MailMergePage() {
 
   const [usageRefreshKey, setUsageRefreshKey] = useState(0);
   const [upgrade, setUpgrade] = useState<{ open: boolean; message?: string }>({ open: false });
+
+  const hasAttachmentColumn = columns.some((c) => c.trim().toLowerCase() === "attachment");
+  const uploadedFilenames = useMemo(() => attachments.map((a) => a.name), [attachments]);
+  const attachmentIssues = useMemo(() => {
+    if (!recipients || !hasAttachmentColumn) return [];
+    const issues: { email: string; missing: string[] }[] = [];
+    for (const r of recipients) {
+      const { missing } = resolveRecipientAttachmentNames(r.fields, uploadedFilenames);
+      if (missing.length > 0) issues.push({ email: r.email, missing });
+    }
+    return issues;
+  }, [recipients, hasAttachmentColumn, uploadedFilenames]);
 
   async function handleExcelFile(files: File[]) {
     const file = files[0];
@@ -107,6 +120,12 @@ export default function MailMergePage() {
     }
     if (smtp.useCustom && (!smtp.host || !smtp.user || !smtp.password || !smtp.fromEmail)) {
       setError("Fill in your SMTP host, username, password, and from-email, or uncheck custom SMTP.");
+      return;
+    }
+    if (attachmentIssues.length > 0) {
+      setError(
+        `${attachmentIssues.length} recipient${attachmentIssues.length === 1 ? "" : "s"} reference an Attachment filename that hasn't been uploaded — check Step 3.`
+      );
       return;
     }
     setSending(true);
@@ -202,7 +221,15 @@ export default function MailMergePage() {
           {recipients && (
             <>
               <div>
-                <StepLabel n={3}>Upload PDF files (optional, sent with every email)</StepLabel>
+                <StepLabel n={3}>Upload PDF files (optional)</StepLabel>
+                <p className="mb-3 text-xs text-brand-brown-dark/50">
+                  By default, every file you drop here is sent to every recipient. To send a
+                  different file per person instead, add a column named{" "}
+                  <span className="font-mono text-brand-blue-deep">Attachment</span> to your
+                  Excel sheet containing the exact filename to send them (e.g.{" "}
+                  <span className="font-mono">invoice_john.pdf</span>) — then upload all the
+                  files below and Mail Merge will match each recipient to their file.
+                </p>
                 <Dropzone
                   accept="application/pdf"
                   multiple
@@ -220,6 +247,28 @@ export default function MailMergePage() {
                         onRemove={() => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
                       />
                     ))}
+                  </div>
+                )}
+                {hasAttachmentColumn && (
+                  <p className="mt-3 text-xs text-brand-brown-dark/50">
+                    &quot;Attachment&quot; column detected — attachments will be matched
+                    per recipient instead of sent to everyone.
+                  </p>
+                )}
+                {attachmentIssues.length > 0 && (
+                  <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                    <p className="font-semibold">
+                      {attachmentIssues.length} recipient{attachmentIssues.length === 1 ? "" : "s"} reference
+                      a file that hasn&apos;t been uploaded yet:
+                    </p>
+                    <ul className="mt-1.5 space-y-0.5">
+                      {attachmentIssues.slice(0, 5).map((issue) => (
+                        <li key={issue.email}>
+                          {issue.email}: {issue.missing.join(", ")}
+                        </li>
+                      ))}
+                      {attachmentIssues.length > 5 && <li>…and {attachmentIssues.length - 5} more</li>}
+                    </ul>
                   </div>
                 )}
               </div>
@@ -276,7 +325,7 @@ export default function MailMergePage() {
                     recipients={recipients}
                     subjectTemplate={subject}
                     bodyTemplate={body}
-                    attachmentNames={attachments.map((a) => a.name)}
+                    uploadedFilenames={uploadedFilenames}
                   />
                 )}
               </div>

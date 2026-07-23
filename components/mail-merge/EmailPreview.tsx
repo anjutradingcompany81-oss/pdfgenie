@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Paperclip } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Paperclip } from "lucide-react";
 import { useState } from "react";
 import { renderTemplate, findField, maskSensitiveFields } from "@/lib/mail-merge/render-template";
+import { resolveRecipientAttachmentNames } from "@/lib/mail-merge/resolve-attachments";
 
 type Recipient = { email: string; fields: Record<string, string> };
 
@@ -10,12 +11,12 @@ export function EmailPreview({
   recipients,
   subjectTemplate,
   bodyTemplate,
-  attachmentNames,
+  uploadedFilenames,
 }: {
   recipients: Recipient[];
   subjectTemplate: string;
   bodyTemplate: string;
-  attachmentNames: string[];
+  uploadedFilenames: string[];
 }) {
   const [index, setIndex] = useState(0);
   const recipient = recipients[index];
@@ -25,6 +26,10 @@ export function EmailPreview({
   const bcc = findField(recipient.fields, "bcc");
   const pdfPassword = findField(recipient.fields, "pdf password");
   const masked = maskSensitiveFields(recipient.fields);
+  const { matched: attachmentNames, missing: missingAttachments } = resolveRecipientAttachmentNames(
+    recipient.fields,
+    uploadedFilenames
+  );
 
   return (
     <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
@@ -97,6 +102,13 @@ export function EmailPreview({
             </span>
           ))}
         </div>
+      )}
+
+      {missingAttachments.length > 0 && (
+        <p className="mt-3 flex items-start gap-1.5 text-xs font-medium text-red-600">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+          Attachment not found among uploaded files: {missingAttachments.join(", ")}
+        </p>
       )}
 
       <div

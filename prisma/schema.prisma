@@ -288,6 +288,10 @@ model MailMergeRecipient {
   error        String?
   smtpResponse String?                  @db.Text
   retryCount   Int                      @default(0)
+  // Comma-joined names of the uploaded attachment(s) actually sent to this
+  // recipient — resolved per-row from an "Attachment" column when present,
+  // see lib/mail-merge/resolve-attachments.ts.
+  attachmentNames String?
   // Snapshot of this recipient's Excel row (minus any PDF-password column,
   // which is deliberately never persisted — see resolvePdfPassword in
   // lib/mail-merge/render-template.ts). Needed to re-render the template on

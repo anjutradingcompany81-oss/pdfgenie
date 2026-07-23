@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getTransport as getDefaultTransport, getFromAddress } from "@/lib/email";
 import { renderTemplate, findField } from "@/lib/mail-merge/render-template";
+import { resolveRecipientAttachmentNames } from "@/lib/mail-merge/resolve-attachments";
 import type { TransientSmtpConfig, MailMergeAttachment } from "@/lib/mail-merge/send-job";
 import nodemailer from "nodemailer";
 
@@ -38,6 +39,8 @@ export async function retryFailedRecipients(
       : smtpConfig.fromEmail
     : getFromAddress();
 
+  const attachmentByName = new Map(attachments.map((a) => [a.filename, a]));
+  const uploadedFilenames = attachments.map((a) => a.filename);
   let nowSent = 0;
   let stillFailed = 0;
 
@@ -47,6 +50,22 @@ export async function retryFailedRecipients(
     const html = renderTemplate(job.bodyTemplate, fields);
     const cc = findField(fields, "cc") || undefined;
     const bcc = findField(fields, "bcc") || undefined;
+
+    const { matched, missing } = resolveRecipientAttachmentNames(fields, uploadedFilenames);
+    const attachmentNames = matched.length > 0 ? matched.join(", ") : null;
+
+    if (missing.length > 0) {
+      await prisma.mailMergeRecipient.update({
+        where: { id: recipient.id },
+        data: {
+          error: `Attachment not found among uploaded files: ${missing.join(", ")}`,
+          attachmentNames,
+          retryCount: { increment: 1 },
+        },
+      });
+      stillFailed++;
+      continue;
+    }
 
     try {
       let smtpResponse: string | null = null;
@@ -58,7 +77,10 @@ export async function retryFailedRecipients(
           bcc,
           subject,
           html,
-          attachments: attachments.map((a) => ({ filename: a.filename, content: a.content })),
+          attachments: matched.map((name) => {
+            const a = attachmentByName.get(name)!;
+            return { filename: a.filename, content: a.content };
+          }),
         });
         smtpResponse = info.response ?? null;
       }
@@ -69,6 +91,7 @@ export async function retryFailedRecipients(
           sentAt: new Date(),
           smtpResponse,
           error: null,
+          attachmentNames,
           retryCount: { increment: 1 },
         },
       });
@@ -78,6 +101,7 @@ export async function retryFailedRecipients(
         where: { id: recipient.id },
         data: {
           error: err instanceof Error ? err.message : "Unknown error",
+          attachmentNames,
           retryCount: { increment: 1 },
         },
       });
