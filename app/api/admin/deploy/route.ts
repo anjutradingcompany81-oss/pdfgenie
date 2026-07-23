@@ -32,10 +32,22 @@ export async function POST() {
 
   const logFd = fs.openSync(path.join(projectRoot, ".deploy-log.txt"), "w");
 
+  // Don't inherit the running app's full environment: it carries internal
+  // Next.js runtime state (TURBOPACK, __NEXT_PRIVATE_*) and PM2 bookkeeping
+  // vars that confuse a nested `next build`. Give the child a clean slate.
   const child = spawn("bash", [scriptPath], {
     cwd: projectRoot,
     detached: true,
     stdio: ["ignore", logFd, logFd],
+    env: {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      USER: process.env.USER,
+      PROJECT_ROOT: projectRoot,
+      // Explicitly not "production" — npm prunes devDependencies (needed to
+      // run `next build`) when NODE_ENV=production during install.
+      NODE_ENV: "development",
+    },
   });
   fs.closeSync(logFd);
 

@@ -11,12 +11,6 @@ STATUS_FILE="$WORK_TREE/.deploy-status.json"
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
-# Spawned as a child of the PM2-managed app, this inherits NODE_ENV=production
-# from ecosystem.config.js. That makes `npm install` prune devDependencies
-# (typescript, tailwind, etc.), which next build needs. Unset it here; next
-# build sets its own production mode internally regardless.
-unset NODE_ENV
-
 write_status() {
   printf '{"state":"%s","message":"%s","updatedAt":"%s"}' \
     "$1" "$2" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$STATUS_FILE"
@@ -25,8 +19,6 @@ write_status() {
 trap 'write_status "error" "Deploy failed. Check .deploy-log.txt for details."' ERR
 
 cd "$WORK_TREE"
-
-env | sort > "$WORK_TREE/.deploy-env-dump.txt"
 
 write_status "running" "Installing dependencies"
 npm ci --no-audit --no-fund
