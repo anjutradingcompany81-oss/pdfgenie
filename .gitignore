@@ -49,3 +49,4 @@ next-env.d.ts
 # admin secrets (VPS-only, never commit) and runtime deploy status
 deploy-secrets.json
 .deploy-status.json
+.deploy-log.txt
