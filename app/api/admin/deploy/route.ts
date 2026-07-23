@@ -30,8 +30,6 @@ export async function POST() {
 
   writeDeployStatus({ state: "running", message: "Deploy queued…" });
 
-  const logFd = fs.openSync(path.join(projectRoot, ".deploy-log.txt"), "w");
-
   // Don't inherit the running app's full environment: it carries internal
   // Next.js runtime state (TURBOPACK, __NEXT_PRIVATE_*) and PM2 bookkeeping
   // vars that confuse a nested `next build`. Give the child a clean slate.
@@ -45,13 +43,21 @@ export async function POST() {
     PROJECT_ROOT: projectRoot,
   };
 
-  const child = spawn("bash", [scriptPath], {
-    cwd: projectRoot,
-    detached: true,
-    stdio: ["ignore", logFd, logFd],
-    env: childEnv as NodeJS.ProcessEnv,
-  });
-  fs.closeSync(logFd);
+  // Launched via systemd-run rather than a plain detached spawn: this script
+  // ends by restarting the very PM2 app it's running as a child of, and PM2
+  // kills its whole process TREE (not just process group) on restart. A
+  // plain detached child is still a tree-descendant in /proc and gets
+  // killed mid-deploy. systemd-run puts it in an independent scope outside
+  // that tree entirely.
+  const child = spawn(
+    "systemd-run",
+    ["--unit", `pdfgenie-deploy-${Date.now()}`, "--collect", "bash", scriptPath],
+    {
+      cwd: projectRoot,
+      stdio: "ignore",
+      env: childEnv as NodeJS.ProcessEnv,
+    }
+  );
 
   child.on("error", (err) => {
     writeDeployStatus({ state: "error", message: `Failed to start deploy: ${err.message}` });
