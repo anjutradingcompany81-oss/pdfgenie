@@ -24,10 +24,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts    Account[]
-  sessions    Session[]
-  resetTokens PasswordResetToken[]
-  toolUsage   ToolUsageEvent[]
+  accounts       Account[]
+  sessions       Session[]
+  resetTokens    PasswordResetToken[]
+  toolUsage      ToolUsageEvent[]
+  subscription   Subscription?
+  billingHistory BillingHistory[]
+  mailMergeJobs  MailMergeJob[]
 
   @@map("users")
 }
@@ -125,4 +128,169 @@ model ContentPage {
   updatedAt DateTime @updatedAt
 
   @@map("content_pages")
+}
+
+// ---------------------------------------------------------------------------
+// Subscription / billing provision. None of this is wired to a real payment
+// gateway yet (see lib/payments/) — every user is implicitly on the Free
+// plan (lib/plans/get-current-plan.ts) regardless of what's in these tables.
+// They exist so a real billing integration is additive, not a schema
+// migration + refactor of everything that currently reads limits from
+// lib/plans/config.ts.
+// ---------------------------------------------------------------------------
+
+enum PlanKey {
+  FREE
+  PREMIUM
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum PaymentProviderKind {
+  STRIPE
+  RAZORPAY
+  PAYPAL
+  PADDLE
+}
+
+// Seeded with FREE/PREMIUM/ENTERPRISE rows (see prisma/seed.ts) so future
+// billing code has real IDs to reference. isActive is false for everything
+// but FREE until a plan is actually purchasable.
+model Plan {
+  id         String   @id @default(cuid())
+  key        PlanKey  @unique
+  name       String
+  priceCents Int      @default(0)
+  interval   String   @default("month")
+  isActive   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+// Not written to by any active code path yet.
+model Subscription {
+  id                     String               @id @default(cuid())
+  userId                 String               @unique
+  planId                 String
+  status                 SubscriptionStatus   @default(ACTIVE)
+  provider               PaymentProviderKind?
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan           Plan             @relation(fields: [planId], references: [id])
+  billingHistory BillingHistory[]
+
+  @@map("subscriptions")
+}
+
+// Not written to by any active code path yet — no payment gateway is wired up.
+model BillingHistory {
+  id             String               @id @default(cuid())
+  userId         String
+  subscriptionId String?
+  amountCents    Int
+  currency       String               @default("usd")
+  status         String
+  provider       PaymentProviderKind?
+  invoiceUrl     String?
+  createdAt      DateTime             @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@map("billing_history")
+}
+
+enum UsageIdentifierType {
+  USER
+  ANONYMOUS
+}
+
+// Real, active table — backs the free-plan daily email limit for both
+// signed-in and anonymous users (see lib/usage-tracking.ts).
+model UsageCounter {
+  id             String              @id @default(cuid())
+  identifierType UsageIdentifierType
+  identifier     String
+  // YYYY-MM-DD (UTC) rather than a DateTime — keeps "per calendar day"
+  // queries a plain equality check instead of a range.
+  date           String
+  emailsSent     Int                 @default(0)
+  jobsCount      Int                 @default(0)
+
+  @@unique([identifierType, identifier, date])
+  @@map("usage_counters")
+}
+
+enum MailMergeJobStatus {
+  PENDING
+  SENDING
+  COMPLETED
+  FAILED
+  BLOCKED
+}
+
+model MailMergeJob {
+  id              String             @id @default(cuid())
+  userId          String?
+  anonymousId     String?
+  status          MailMergeJobStatus @default(PENDING)
+  subject         String
+  recipientCount  Int
+  attachmentCount Int                @default(0)
+  errorMessage    String?
+  createdAt       DateTime           @default(now())
+  completedAt     DateTime?
+
+  user       User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  recipients MailMergeRecipient[]
+
+  @@index([userId])
+  @@index([anonymousId])
+  @@map("mail_merge_jobs")
+}
+
+enum MailMergeRecipientStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model MailMergeRecipient {
+  id     String                   @id @default(cuid())
+  jobId  String
+  email  String
+  status MailMergeRecipientStatus @default(PENDING)
+  error  String?
+  sentAt DateTime?
+
+  job MailMergeJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("mail_merge_recipients")
+}
+
+// Real signups from "Notify Me" clicks on premium-gated features — no
+// payment involved, just capturing interest.
+model WaitlistSignup {
+  id        String   @id @default(cuid())
+  email     String
+  feature   String
+  createdAt DateTime @default(now())
+
+  @@map("waitlist_signups")
 }

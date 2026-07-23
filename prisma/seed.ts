@@ -32,6 +32,23 @@ async function main() {
   });
 
   console.log(`Seeded admin account: ${admin.email}`);
+
+  // Plan rows exist so future billing code has real IDs to reference — only
+  // FREE is active. Limits/features actually enforced today live in
+  // lib/plans/config.ts, not these rows.
+  const plans = [
+    { key: "FREE" as const, name: "Free", priceCents: 0, isActive: true },
+    { key: "PREMIUM" as const, name: "Premium", priceCents: 0, isActive: false },
+    { key: "ENTERPRISE" as const, name: "Enterprise", priceCents: 0, isActive: false },
+  ];
+  for (const plan of plans) {
+    await prisma.plan.upsert({
+      where: { key: plan.key },
+      update: { name: plan.name, isActive: plan.isActive },
+      create: plan,
+    });
+  }
+  console.log(`Seeded plans: ${plans.map((p) => p.key).join(", ")}`);
 }
 
 main()

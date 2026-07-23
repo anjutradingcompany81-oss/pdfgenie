@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-function getTransport() {
+export function getTransport() {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env;
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASSWORD) return null;
 
@@ -10,6 +10,10 @@ function getTransport() {
     secure: Number(SMTP_PORT) === 465,
     auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
   });
+}
+
+export function getFromAddress(): string {
+  return process.env.SMTP_FROM || "PDF Genie <no-reply@pdfgenie.in>";
 }
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<boolean> {

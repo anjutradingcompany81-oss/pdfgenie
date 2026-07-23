@@ -21,6 +21,7 @@ import {
   Images,
   FileUp,
   FileDown,
+  Mail,
 } from "lucide-react";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
 import { ToolCard, type Tool } from "@/components/tools/ToolCard";
@@ -167,6 +168,15 @@ const CONVERT_TOOLS: Tool[] = [
   },
 ];
 
+const AUTOMATE_TOOLS: Tool[] = [
+  {
+    href: "/tools/mail-merge",
+    icon: Mail,
+    title: "Mail Merge",
+    copy: "Send personalized emails to a list from Excel, with PDF attachments. Free plan: 30 emails/job.",
+  },
+];
+
 function ToolSection({
   eyebrow,
   title,
@@ -212,6 +222,7 @@ export default function ToolsPage() {
         <ToolSection eyebrow="Core tools" title="The essentials" tools={CORE_TOOLS} />
         <ToolSection eyebrow="Organize PDF" title="Rework a PDF's pages" tools={ORGANIZE_TOOLS} />
         <ToolSection eyebrow="Convert PDF" title="Move between formats" tools={CONVERT_TOOLS} />
+        <ToolSection eyebrow="Automate" title="Reach your whole list" tools={AUTOMATE_TOOLS} />
 
         <PrivacyNote />
       </div>
