@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CONTENT_SLUGS, type ContentSlug } from "@/lib/content-pages";
+import { CONTENT_SLUGS, type ContentSlug } from "@/lib/content-slugs";
 
 const LABELS: Record<ContentSlug, string> = {
   faq: "FAQ",

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
+import { CONTENT_SLUGS, type ContentSlug } from "@/lib/content-slugs";
 
-export const CONTENT_SLUGS = ["faq", "privacy-policy", "terms", "contact", "about"] as const;
-export type ContentSlug = (typeof CONTENT_SLUGS)[number];
+export { CONTENT_SLUGS, type ContentSlug };
 
 const DEFAULTS: Record<ContentSlug, { title: string; body: string }> = {
   faq: {
