@@ -1,6 +1,7 @@
 "use client";
 
-import { Mail, Loader2, Sparkles, FileText, Lock } from "lucide-react";
+import Link from "next/link";
+import { Mail, Loader2, Sparkles, FileText, Lock, History, Download } from "lucide-react";
 import { useState } from "react";
 import { ToolShell } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
@@ -9,12 +10,15 @@ import { MagneticButton } from "@/components/ui/MagneticButton";
 import { UsageCard } from "@/components/mail-merge/UsageCard";
 import { UpgradeDialog } from "@/components/mail-merge/UpgradeDialog";
 import { RecipientPreviewTable } from "@/components/mail-merge/RecipientPreviewTable";
+import { SmtpConfigForm, EMPTY_SMTP_CONFIG, type SmtpConfigState } from "@/components/mail-merge/SmtpConfigForm";
+import { RichTextEditor } from "@/components/mail-merge/RichTextEditor";
+import { TemplateLibrary } from "@/components/mail-merge/TemplateLibrary";
+import { EmailPreview } from "@/components/mail-merge/EmailPreview";
 
 type Recipient = { email: string; fields: Record<string, string> };
 
 const PREMIUM_FEATURES = [
   "Scheduled campaigns",
-  "Email template library",
   "Multiple SMTP accounts",
   "Outlook integration",
   "Gmail OAuth",
@@ -23,18 +27,31 @@ const PREMIUM_FEATURES = [
   "Priority support",
 ];
 
+function StepLabel({ n, children }: { n: number; children: string }) {
+  return (
+    <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-brown-dark">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue-deep text-[11px] font-bold text-white">
+        {n}
+      </span>
+      {children}
+    </p>
+  );
+}
+
 export default function MailMergePage() {
+  const [smtp, setSmtp] = useState<SmtpConfigState>(EMPTY_SMTP_CONFIG);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [recipients, setRecipients] = useState<Recipient[] | null>(null);
   const [columns, setColumns] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
   const [parsing, setParsing] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ sent: number; failed: number; smtpConfigured: boolean } | null>(
+  const [result, setResult] = useState<{ jobId: string; sent: number; failed: number; smtpConfigured: boolean } | null>(
     null
   );
 
@@ -47,6 +64,7 @@ export default function MailMergePage() {
     setError(null);
     setResult(null);
     setRecipients(null);
+    setShowPreview(false);
     setParsing(true);
     try {
       const formData = new FormData();
@@ -78,12 +96,17 @@ export default function MailMergePage() {
     setAttachments([]);
     setError(null);
     setResult(null);
+    setShowPreview(false);
   }
 
   async function handleSend() {
     if (!excelFile || !recipients) return;
     if (!subject.trim() || !body.trim()) {
       setError("Add a subject and message body first.");
+      return;
+    }
+    if (smtp.useCustom && (!smtp.host || !smtp.user || !smtp.password || !smtp.fromEmail)) {
+      setError("Fill in your SMTP host, username, password, and from-email, or uncheck custom SMTP.");
       return;
     }
     setSending(true);
@@ -94,6 +117,7 @@ export default function MailMergePage() {
       formData.append("excel", excelFile);
       formData.append("subject", subject);
       formData.append("body", body);
+      formData.append("smtpConfig", JSON.stringify(smtp));
       attachments.forEach((file) => formData.append("attachments", file));
 
       const res = await fetch("/api/mail-merge/send", { method: "POST", body: formData });
@@ -121,12 +145,25 @@ export default function MailMergePage() {
       title="Mail Merge"
       description="Send personalized emails to a list from an Excel file, with optional PDF attachments."
     >
-      <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
+      <div className="mb-6 flex justify-end">
+        <Link
+          href="/tools/mail-merge/history"
+          className="flex items-center gap-1.5 text-sm font-semibold text-brand-blue-deep hover:underline"
+        >
+          <History size={14} />
+          View past jobs
+        </Link>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
         <div className="space-y-8">
           <div>
-            <p className="mb-3 text-sm font-semibold text-brand-brown-dark">
-              1. Recipient list (Excel or CSV, needs an &quot;Email&quot; column)
-            </p>
+            <StepLabel n={1}>SMTP configuration</StepLabel>
+            <SmtpConfigForm value={smtp} onChange={setSmtp} />
+          </div>
+
+          <div>
+            <StepLabel n={2}>Upload recipient list (Excel or CSV, needs an &quot;Email&quot; column)</StepLabel>
             {!excelFile && (
               <Dropzone
                 accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
@@ -157,9 +194,7 @@ export default function MailMergePage() {
           {recipients && (
             <>
               <div>
-                <p className="mb-3 text-sm font-semibold text-brand-brown-dark">
-                  2. PDF attachments (optional, sent with every email)
-                </p>
+                <StepLabel n={3}>Upload PDF files (optional, sent with every email)</StepLabel>
                 <Dropzone
                   accept="application/pdf"
                   multiple
@@ -182,16 +217,16 @@ export default function MailMergePage() {
               </div>
 
               <div>
-                <p className="mb-3 text-sm font-semibold text-brand-brown-dark">3. Compose your email</p>
+                <StepLabel n={4}>Email composer</StepLabel>
                 {columns.length > 0 && (
-                  <p className="mb-3 text-xs text-brand-brown-dark/50">
+                  <p className="mb-3 flex flex-wrap gap-1.5 text-xs text-brand-brown-dark/50">
                     Merge fields:{" "}
-                    {columns.map((c) => (
+                    {[...columns, "Current Date"].map((c) => (
                       <button
                         key={c}
                         type="button"
                         onClick={() => setBody((b) => `${b}{{${c}}}`)}
-                        className="mr-1.5 rounded-full bg-brand-blue/10 px-2 py-0.5 font-mono text-brand-blue-deep hover:bg-brand-blue/20"
+                        className="rounded-full bg-brand-blue/10 px-2 py-0.5 font-mono text-brand-blue-deep hover:bg-brand-blue/20"
                       >
                         {`{{${c}}}`}
                       </button>
@@ -201,44 +236,90 @@ export default function MailMergePage() {
                 <input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Subject — e.g. Hello {{Name}}!"
+                  placeholder="Subject — e.g. Promotion Letter - {{Name}}"
                   className="mb-3 w-full rounded-full border border-brand-brown-dark/15 px-5 py-3 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
                 />
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={8}
-                  placeholder="Write your message. Use {{FieldName}} to personalize."
-                  className="w-full rounded-2xl border border-brand-brown-dark/15 px-5 py-4 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
-                />
+                <RichTextEditor content={body} onChange={setBody} placeholder="Write your message. Use {{FieldName}} to personalize." />
+
+                <div className="mt-4">
+                  <TemplateLibrary
+                    currentSubject={subject}
+                    currentBody={body}
+                    onApply={(s, b) => {
+                      setSubject(s);
+                      setBody(b);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <StepLabel n={5}>Email preview</StepLabel>
+                <button
+                  type="button"
+                  data-hover="true"
+                  onClick={() => setShowPreview((v) => !v)}
+                  className="mb-3 text-sm font-semibold text-brand-blue-deep hover:underline"
+                >
+                  {showPreview ? "Hide preview" : "Preview personalized emails"}
+                </button>
+                {showPreview && (
+                  <EmailPreview
+                    recipients={recipients}
+                    subjectTemplate={subject}
+                    bodyTemplate={body}
+                    attachmentNames={attachments.map((a) => a.name)}
+                  />
+                )}
               </div>
 
               {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-              {result && (
-                <div className="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4 text-sm text-brand-brown-dark">
-                  <p className="font-semibold">
-                    {result.sent} sent, {result.failed} failed.
-                  </p>
-                  {!result.smtpConfigured && (
-                    <p className="mt-1 text-brand-brown-dark/60">
-                      Note: email sending isn&apos;t configured on this server yet, so recipients were
-                      processed and counted against your quota but no email actually went out.
-                    </p>
+              <div>
+                <StepLabel n={6}>Send emails</StepLabel>
+                <MagneticButton onClick={handleSend} disabled={sending}>
+                  {sending ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    `Send to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}`
                   )}
+                </MagneticButton>
+              </div>
+
+              {result && (
+                <div>
+                  <StepLabel n={7}>Reports & logs</StepLabel>
+                  <div className="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4 text-sm text-brand-brown-dark">
+                    <p className="font-semibold">
+                      {result.sent} sent, {result.failed} failed.
+                    </p>
+                    {!result.smtpConfigured && (
+                      <p className="mt-1 text-brand-brown-dark/60">
+                        Note: email sending isn&apos;t configured on this server yet, so recipients were
+                        processed and counted against your quota but no email actually went out.
+                      </p>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Link
+                        href={`/tools/mail-merge/history/${result.jobId}`}
+                        className="flex items-center gap-1.5 rounded-full bg-brand-blue-deep px-4 py-2 text-xs font-semibold text-white"
+                      >
+                        View delivery dashboard
+                      </Link>
+                      <a
+                        href={`/api/mail-merge/jobs/${result.jobId}/log?format=xlsx`}
+                        className="flex items-center gap-1.5 rounded-full border border-brand-brown-dark/15 px-4 py-2 text-xs font-semibold text-brand-brown-dark"
+                      >
+                        <Download size={13} />
+                        Download log
+                      </a>
+                    </div>
+                  </div>
                 </div>
               )}
-
-              <MagneticButton onClick={handleSend} disabled={sending}>
-                {sending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Sending…
-                  </>
-                ) : (
-                  `Send to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}`
-                )}
-              </MagneticButton>
             </>
           )}
 

@@ -1,8 +1,28 @@
 import { NextResponse } from "next/server";
 import { parseRecipientsFile } from "@/lib/mail-merge/parse-recipients";
-import { validateAndSend } from "@/lib/mail-merge/send-job";
+import { validateAndSend, type TransientSmtpConfig } from "@/lib/mail-merge/send-job";
 import { resolveIdentity } from "@/lib/mail-merge/resolve-identity";
 import { isRateLimited, recordFailedAttempt } from "@/lib/rate-limit";
+
+function parseSmtpConfig(raw: FormDataEntryValue | null): TransientSmtpConfig | undefined {
+  if (typeof raw !== "string" || !raw) return undefined;
+  try {
+    const data = JSON.parse(raw);
+    if (!data?.useCustom) return undefined;
+    if (!data.host || !data.user || !data.password || !data.fromEmail) return undefined;
+    return {
+      host: String(data.host),
+      port: Number(data.port) || 587,
+      secure: Boolean(data.secure),
+      user: String(data.user),
+      password: String(data.password),
+      fromEmail: String(data.fromEmail),
+      fromName: data.fromName ? String(data.fromName) : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 export async function POST(request: Request) {
   const { userId, identifier, plan } = await resolveIdentity();
@@ -21,6 +41,7 @@ export async function POST(request: Request) {
   const subject = formData.get("subject");
   const body = formData.get("body");
   const attachmentFiles = formData.getAll("attachments").filter((f): f is File => f instanceof File);
+  const smtpConfig = parseSmtpConfig(formData.get("smtpConfig"));
 
   if (!(excelFile instanceof File) || typeof subject !== "string" || typeof body !== "string") {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
@@ -56,6 +77,7 @@ export async function POST(request: Request) {
     recipients,
     attachments,
     excelSizeBytes: excelFile.size,
+    smtpConfig,
   });
 
   if (!result.ok) {

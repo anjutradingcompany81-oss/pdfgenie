@@ -1,11 +1,30 @@
+import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/db";
-import { getTransport, getFromAddress } from "@/lib/email";
-import { renderTemplate } from "@/lib/mail-merge/render-template";
+import { getTransport as getDefaultTransport, getFromAddress } from "@/lib/email";
+import { renderTemplate, findField } from "@/lib/mail-merge/render-template";
 import { recordUsage, getUsageToday, type UsageIdentifier } from "@/lib/usage-tracking";
 import { PLAN_LIMITS, type PlanKey } from "@/lib/plans/config";
 import type { Recipient } from "@/lib/mail-merge/parse-recipients";
 
 export type MailMergeAttachment = { filename: string; content: Buffer };
+
+/**
+ * Entered fresh on the Mail Merge page for this one job — see
+ * lib/security-notes.md-style comment below. Never written to the
+ * database, never logged. Held only for the lifetime of this function
+ * call; once validateAndSend() returns, nothing in this process still
+ * references it and it's eligible for garbage collection like any other
+ * local variable.
+ */
+export type TransientSmtpConfig = {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password: string;
+  fromEmail: string;
+  fromName?: string;
+};
 
 export type SendJobInput = {
   identifier: UsageIdentifier;
@@ -16,11 +35,27 @@ export type SendJobInput = {
   recipients: Recipient[];
   attachments: MailMergeAttachment[];
   excelSizeBytes: number;
+  smtpConfig?: TransientSmtpConfig;
 };
 
 export type SendJobResult =
   | { ok: true; jobId: string; sent: number; failed: number; smtpConfigured: boolean }
   | { ok: false; reason: string };
+
+function buildTransport(config?: TransientSmtpConfig): { transport: Transporter | null; from: string } {
+  if (config) {
+    return {
+      transport: nodemailer.createTransport({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        auth: { user: config.user, pass: config.password },
+      }),
+      from: config.fromName ? `${config.fromName} <${config.fromEmail}>` : config.fromEmail,
+    };
+  }
+  return { transport: getDefaultTransport(), from: getFromAddress() };
+}
 
 export async function validateAndSend(input: SendJobInput): Promise<SendJobResult> {
   const limits = PLAN_LIMITS[input.plan];
@@ -79,17 +114,24 @@ export async function validateAndSend(input: SendJobInput): Promise<SendJobResul
       anonymousId: input.identifier.type === "ANONYMOUS" ? input.identifier.id : null,
       status: "SENDING",
       subject: input.subjectTemplate,
+      bodyTemplate: input.bodyTemplate,
+      senderEmail: input.smtpConfig?.fromEmail ?? null,
       recipientCount: input.recipients.length,
       attachmentCount: input.attachments.length,
       recipients: {
-        create: input.recipients.map((r) => ({ email: r.email, status: "PENDING" })),
+        create: input.recipients.map((r) => ({
+          email: r.email,
+          cc: findField(r.fields, "cc") || null,
+          bcc: findField(r.fields, "bcc") || null,
+          status: "PENDING",
+          fields: r.fields,
+        })),
       },
     },
     include: { recipients: true },
   });
 
-  const transport = getTransport();
-  const from = getFromAddress();
+  const { transport, from } = buildTransport(input.smtpConfig);
   let sent = 0;
   let failed = 0;
 
@@ -98,24 +140,30 @@ export async function validateAndSend(input: SendJobInput): Promise<SendJobResul
     if (!recipient) continue;
 
     const subject = renderTemplate(input.subjectTemplate, recipient.fields);
-    const html = renderTemplate(input.bodyTemplate, recipient.fields).replace(/\n/g, "<br>");
+    const html = renderTemplate(input.bodyTemplate, recipient.fields);
+    const cc = findField(recipient.fields, "cc") || undefined;
+    const bcc = findField(recipient.fields, "bcc") || undefined;
 
     try {
+      let smtpResponse: string | null = null;
       if (transport) {
-        await transport.sendMail({
+        const info = await transport.sendMail({
           from,
           to: recipient.email,
+          cc,
+          bcc,
           subject,
           html,
           attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })),
         });
+        smtpResponse = info.response ?? null;
       }
       // If SMTP isn't configured, we still record the recipient as
       // processed (not silently "sent") — see the job's smtpConfigured
       // flag, surfaced to the caller so the UI can be honest about it.
       await prisma.mailMergeRecipient.update({
         where: { id: recipientRow.id },
-        data: { status: "SENT", sentAt: new Date() },
+        data: { status: "SENT", sentAt: new Date(), smtpResponse },
       });
       sent++;
     } catch (err) {

@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../lib/password";
+import { BUILT_IN_TEMPLATES } from "../lib/mail-merge/built-in-templates";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -49,6 +50,25 @@ async function main() {
     });
   }
   console.log(`Seeded plans: ${plans.map((p) => p.key).join(", ")}`);
+
+  // Built-in templates (userId: null, isBuiltIn: true) are seeded by name —
+  // re-running this script updates their content instead of duplicating them.
+  for (const template of BUILT_IN_TEMPLATES) {
+    const existing = await prisma.emailTemplate.findFirst({
+      where: { name: template.name, isBuiltIn: true },
+    });
+    if (existing) {
+      await prisma.emailTemplate.update({
+        where: { id: existing.id },
+        data: { subject: template.subject, body: template.body },
+      });
+    } else {
+      await prisma.emailTemplate.create({
+        data: { ...template, isBuiltIn: true, userId: null },
+      });
+    }
+  }
+  console.log(`Seeded ${BUILT_IN_TEMPLATES.length} built-in email templates`);
 }
 
 main()

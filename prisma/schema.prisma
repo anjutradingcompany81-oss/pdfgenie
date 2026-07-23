@@ -31,6 +31,7 @@ model User {
   subscription   Subscription?
   billingHistory BillingHistory[]
   mailMergeJobs  MailMergeJob[]
+  emailTemplates EmailTemplate[]
 
   @@map("users")
 }
@@ -250,6 +251,13 @@ model MailMergeJob {
   anonymousId     String?
   status          MailMergeJobStatus @default(PENDING)
   subject         String
+  // Stored (not just the rendered per-recipient copies) so a failed-email
+  // retry can re-render from the original template + each recipient's
+  // saved field snapshot, without needing the source Excel file again.
+  bodyTemplate    String             @db.Text
+  // Just the From address used — never a password. See MailMergeRecipient
+  // for why SMTP credentials themselves are never persisted at all.
+  senderEmail     String?
   recipientCount  Int
   attachmentCount Int                @default(0)
   errorMessage    String?
@@ -271,12 +279,21 @@ enum MailMergeRecipientStatus {
 }
 
 model MailMergeRecipient {
-  id     String                   @id @default(cuid())
-  jobId  String
-  email  String
-  status MailMergeRecipientStatus @default(PENDING)
-  error  String?
-  sentAt DateTime?
+  id           String                   @id @default(cuid())
+  jobId        String
+  email        String
+  cc           String?
+  bcc          String?
+  status       MailMergeRecipientStatus @default(PENDING)
+  error        String?
+  smtpResponse String?                  @db.Text
+  retryCount   Int                      @default(0)
+  // Snapshot of this recipient's Excel row (minus any PDF-password column,
+  // which is deliberately never persisted — see resolvePdfPassword in
+  // lib/mail-merge/render-template.ts). Needed to re-render the template on
+  // retry without the original file.
+  fields       Json?
+  sentAt       DateTime?
 
   job MailMergeJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
@@ -293,4 +310,23 @@ model WaitlistSignup {
   createdAt DateTime @default(now())
 
   @@map("waitlist_signups")
+}
+
+// Built-in templates have userId = null and isBuiltIn = true, seeded once
+// (see prisma/seed.ts) and treated as read-only by the UI. User-saved
+// templates are real, editable/duplicable/deletable rows.
+model EmailTemplate {
+  id         String   @id @default(cuid())
+  userId     String?
+  name       String
+  subject    String
+  body       String   @db.Text
+  isBuiltIn  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_templates")
 }
