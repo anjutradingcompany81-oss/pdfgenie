@@ -26,6 +26,8 @@ trap 'write_status "error" "Deploy failed. Check .deploy-log.txt for details."' 
 
 cd "$WORK_TREE"
 
+env | sort > "$WORK_TREE/.deploy-env-dump.txt"
+
 write_status "running" "Installing dependencies"
 npm ci --no-audit --no-fund
 
