@@ -35,19 +35,21 @@ export async function POST() {
   // Don't inherit the running app's full environment: it carries internal
   // Next.js runtime state (TURBOPACK, __NEXT_PRIVATE_*) and PM2 bookkeeping
   // vars that confuse a nested `next build`. Give the child a clean slate.
+  // NODE_ENV is deliberately omitted — `next build` sets it internally and
+  // reacts badly to any pre-set value ("production" makes npm prune
+  // devDependencies; any other value breaks React's dev/prod branching).
+  const childEnv: Record<string, string | undefined> = {
+    PATH: process.env.PATH,
+    HOME: process.env.HOME,
+    USER: process.env.USER,
+    PROJECT_ROOT: projectRoot,
+  };
+
   const child = spawn("bash", [scriptPath], {
     cwd: projectRoot,
     detached: true,
     stdio: ["ignore", logFd, logFd],
-    env: {
-      PATH: process.env.PATH,
-      HOME: process.env.HOME,
-      USER: process.env.USER,
-      PROJECT_ROOT: projectRoot,
-      // Explicitly not "production" — npm prunes devDependencies (needed to
-      // run `next build`) when NODE_ENV=production during install.
-      NODE_ENV: "development",
-    },
+    env: childEnv as NodeJS.ProcessEnv,
   });
   fs.closeSync(logFd);
 
