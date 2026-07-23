@@ -27,7 +27,7 @@ trap 'write_status "error" "Deploy failed. Check .deploy-log.txt for details."' 
 cd "$WORK_TREE"
 
 write_status "running" "Installing dependencies"
-npm install --no-audit --no-fund
+npm ci --no-audit --no-fund
 
 write_status "running" "Building"
 npm run build
