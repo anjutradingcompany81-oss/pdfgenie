@@ -8,11 +8,8 @@ set -e
 
 WORK_TREE="$(cd "$(dirname "$0")/.." && pwd)"
 STATUS_FILE="$WORK_TREE/.deploy-status.json"
-LOG_FILE="$WORK_TREE/.deploy-log.txt"
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
-
-exec >"$LOG_FILE" 2>&1
 
 write_status() {
   printf '{"state":"%s","message":"%s","updatedAt":"%s"}' \

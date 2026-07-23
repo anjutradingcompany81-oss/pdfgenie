@@ -22,11 +22,19 @@ export async function POST() {
 
   writeDeployStatus({ state: "running", message: "Deploy queued…" });
 
+  const logFd = fs.openSync(path.join(process.cwd(), ".deploy-log.txt"), "w");
+
   const child = spawn("bash", [scriptPath], {
     cwd: process.cwd(),
     detached: true,
-    stdio: "ignore",
+    stdio: ["ignore", logFd, logFd],
   });
+  fs.closeSync(logFd);
+
+  child.on("error", (err) => {
+    writeDeployStatus({ state: "error", message: `Failed to start deploy: ${err.message}` });
+  });
+
   child.unref();
 
   return NextResponse.json({ ok: true });
