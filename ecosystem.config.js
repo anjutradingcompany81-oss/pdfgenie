@@ -2,6 +2,7 @@
 // It lives only on the VPS (gitignored) — see scripts/hash-admin-password.mjs to generate it.
 let secrets = {};
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- PM2 loads this file as plain CommonJS
   secrets = require("./deploy-secrets.json");
 } catch {
   // Not present locally/in CI — admin routes simply stay unconfigured.
