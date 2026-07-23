@@ -72,8 +72,8 @@ export function DeployPanel() {
         <div>
           <h2 className="text-lg font-bold text-brand-brown-dark">Deploy latest version</h2>
           <p className="mt-1 text-sm text-brand-brown-dark/65">
-            Pulls the latest reviewed code from GitHub main, rebuilds, and restarts the live
-            site.
+            Rebuilds and restarts the live site from the code most recently pushed to the
+            server.
           </p>
         </div>
         <button
