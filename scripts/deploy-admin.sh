@@ -33,6 +33,6 @@ cp -r public .next/standalone/
 cp -r .next/static .next/standalone/.next/
 
 write_status "running" "Restarting app"
-pm2 restart pdfgenie
+pm2 startOrReload ecosystem.config.js --env production
 
 write_status "success" "Website updated successfully"
