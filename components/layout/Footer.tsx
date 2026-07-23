@@ -8,15 +8,26 @@ import { MagneticButton } from "@/components/ui/MagneticButton";
 const COLUMNS = [
   {
     title: "Product",
-    links: ["Features", "How it works", "Pricing", "Changelog"],
+    links: [
+      { label: "Features", href: "/#features" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "FAQ", href: "/faq" },
+    ],
   },
   {
     title: "Company",
-    links: ["About", "Blog", "Careers", "Contact"],
+    links: [
+      { label: "About", href: "/about" },
+      { label: "Contact", href: "/contact" },
+    ],
   },
   {
     title: "Legal",
-    links: ["Privacy", "Terms", "Security"],
+    links: [
+      { label: "Privacy Policy", href: "/privacy-policy" },
+      { label: "Terms & Conditions", href: "/terms" },
+    ],
   },
 ];
 
@@ -75,13 +86,13 @@ export function Footer() {
                 </h3>
                 <ul className="space-y-3">
                   {col.links.map((link) => (
-                    <li key={link}>
+                    <li key={link.label}>
                       <Link
-                        href="#"
+                        href={link.href}
                         data-hover="true"
                         className="text-sm text-white/80 transition-colors hover:text-brand-blue-light"
                       >
-                        {link}
+                        {link.label}
                       </Link>
                     </li>
                   ))}

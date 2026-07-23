@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  // Null for OAuth-only accounts (no password set).
+  password      String?
+  image         String?
+  role          Role      @default(USER)
+  disabled      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  resetTokens PasswordResetToken[]
+  toolUsage   ToolUsageEvent[]
+
+  @@map("users")
+}
+
+// Standard Auth.js adapter models below (Account/Session/VerificationToken).
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// Defined for completeness / future use with OAuth-only sign-in. Because a
+// Credentials provider is configured, Auth.js requires the "jwt" session
+// strategy at runtime (see lib/auth.ts) — this table is not written to
+// while that's the case.
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// Lightweight, privacy-respecting usage counter: just a tool slug, an
+// optional user, and a timestamp. No file names, content, or metadata.
+model ToolUsageEvent {
+  id        String   @id @default(cuid())
+  toolSlug  String
+  userId    String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([toolSlug])
+  @@index([createdAt])
+  @@map("tool_usage_events")
+}
+
+model SiteSettings {
+  id               Int      @id @default(1)
+  siteName         String   @default("PDF Genie")
+  logoUrl          String?
+  contactEmail     String?
+  footerText       String?
+  maxFileSizeMb    Int      @default(50)
+  allowedFileTypes String   @default("pdf,png,jpg,jpeg,docx,doc")
+  maintenanceMode  Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+model ContentPage {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  body      String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("content_pages")
+}

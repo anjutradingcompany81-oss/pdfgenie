@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import NextLink from "next/link";
+import { signOut } from "next-auth/react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 
 type Link_ = { href: string; label: string; route?: boolean };
@@ -9,9 +10,11 @@ type Link_ = { href: string; label: string; route?: boolean };
 export function MobileMenu({
   onClose,
   links,
+  isAuthed = false,
 }: {
   onClose: () => void;
   links: Link_[];
+  isAuthed?: boolean;
 }) {
   return (
     <motion.div
@@ -69,9 +72,22 @@ export function MobileMenu({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.5 }}
       >
-        <MagneticButton href="/tools" onClick={onClose} variant="inverted" className="w-full justify-center">
-          Try it free
-        </MagneticButton>
+        {isAuthed ? (
+          <MagneticButton
+            onClick={() => {
+              onClose();
+              signOut({ callbackUrl: "/" });
+            }}
+            variant="inverted"
+            className="w-full justify-center"
+          >
+            Log out
+          </MagneticButton>
+        ) : (
+          <MagneticButton href="/signup" onClick={onClose} variant="inverted" className="w-full justify-center">
+            Sign up
+          </MagneticButton>
+        )}
       </motion.div>
     </motion.div>
   );

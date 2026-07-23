@@ -6,6 +6,7 @@ import { Cursor } from "@/components/layout/Cursor";
 import { Preloader } from "@/components/layout/Preloader";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -32,11 +33,13 @@ export default function RootLayout({
         </a>
         <Preloader />
         <Cursor />
-        <SmoothScroll>
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
-        </SmoothScroll>
+        <AuthProvider>
+          <SmoothScroll>
+            <Navbar />
+            <main>{children}</main>
+            <Footer />
+          </SmoothScroll>
+        </AuthProvider>
       </body>
     </html>
   );

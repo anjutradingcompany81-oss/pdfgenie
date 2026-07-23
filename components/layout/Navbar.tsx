@@ -3,24 +3,46 @@
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import Link from "next/link";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { UserMenu } from "@/components/layout/UserMenu";
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How it works" },
   { href: "/tools", label: "Tools", route: true },
   { href: "/#pricing", label: "Pricing" },
 ];
 
+const LOGGED_OUT_LINKS = [
+  ...BASE_NAV_LINKS,
+  { href: "/admin/dashboard/login", label: "Admin", route: true },
+];
+
+const LOGGED_IN_LINKS = [
+  { href: "/dashboard", label: "Dashboard", route: true },
+  { href: "/tools", label: "Tools", route: true },
+  { href: "/dashboard/profile", label: "Profile", route: true },
+];
+
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollY } = useScroll();
+  const { data: session, status } = useSession();
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setScrolled(latest > 24);
   });
+
+  const isAuthed = status === "authenticated";
+  const navLinks = isAuthed ? LOGGED_IN_LINKS : LOGGED_OUT_LINKS;
+  // Mobile has no separate button area, so "Log in" (handled as a standalone
+  // text link on desktop) is folded into the link list here instead.
+  const mobileLinks = isAuthed
+    ? navLinks
+    : [...BASE_NAV_LINKS, { href: "/login", label: "Log in", route: true }, ...LOGGED_OUT_LINKS.slice(BASE_NAV_LINKS.length)];
 
   return (
     <>
@@ -42,7 +64,7 @@ export function Navbar() {
           </a>
 
           <ul className="hidden items-center gap-10 md:flex">
-            {NAV_LINKS.map((link) =>
+            {navLinks.map((link) =>
               link.route ? (
                 <li key={link.href}>
                   <Link
@@ -69,10 +91,23 @@ export function Navbar() {
             )}
           </ul>
 
-          <div className="hidden md:block">
-            <MagneticButton href="/tools" className="px-6 py-3 text-xs">
-              Try it free
-            </MagneticButton>
+          <div className="hidden items-center gap-5 md:flex">
+            {isAuthed ? (
+              <UserMenu name={session?.user?.name} image={session?.user?.image} />
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  data-hover="true"
+                  className="text-sm font-semibold text-brand-brown-dark hover:text-brand-blue-deep"
+                >
+                  Log in
+                </Link>
+                <MagneticButton href="/signup" className="px-6 py-3 text-xs">
+                  Sign up
+                </MagneticButton>
+              </>
+            )}
           </div>
 
           <button
@@ -90,7 +125,9 @@ export function Navbar() {
       </motion.header>
 
       <AnimatePresence>
-        {menuOpen && <MobileMenu onClose={() => setMenuOpen(false)} links={NAV_LINKS} />}
+        {menuOpen && (
+          <MobileMenu onClose={() => setMenuOpen(false)} links={mobileLinks} isAuthed={isAuthed} />
+        )}
       </AnimatePresence>
     </>
   );

@@ -50,3 +50,6 @@ next-env.d.ts
 deploy-secrets.json
 .deploy-status.json
 .deploy-log.txt
+
+# user-uploaded avatars (VPS-only, persisted outside .next/standalone/public)
+/uploads/

@@ -29,8 +29,22 @@ trap 'write_status "error" "Deploy failed. Check .deploy-log.txt for details."' 
 
 cd "$WORK_TREE"
 
+# deploy-secrets.json is VPS-only (gitignored) and holds DATABASE_URL among
+# other things — it's not part of this script's otherwise-minimal env (see
+# route.ts), so pull just that one value out for the migrate step below.
+if [ -f "$WORK_TREE/deploy-secrets.json" ]; then
+  export DATABASE_URL="$(node -e "console.log(require('./deploy-secrets.json').DATABASE_URL || '')" 2>/dev/null)"
+fi
+
 write_status "running" "Installing dependencies"
 npm ci --no-audit --no-fund
+
+write_status "running" "Running database migrations"
+if [ -n "$DATABASE_URL" ]; then
+  npx prisma migrate deploy
+else
+  echo "DATABASE_URL not set — skipping migrations"
+fi
 
 write_status "running" "Building"
 npm run build
