@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-[100svh] items-center justify-center px-6 py-32">
-      <div className="w-full max-w-sm rounded-3xl border border-brand-brown-dark/10 bg-white p-8">
+      <div className="w-full max-w-sm rounded-3xl border border-white/8 bg-brand-surface p-8">
         <h1 className="text-2xl font-bold text-brand-brown-dark">Reset your password</h1>
         <p className="mt-2 text-sm text-brand-brown-dark/65">
           Enter your email and we&apos;ll send you a reset link.
@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
               />
             </div>
 
-            {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+            {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
 
             <MagneticButton type="submit" disabled={loading} className="w-full justify-center">
               {loading ? (
