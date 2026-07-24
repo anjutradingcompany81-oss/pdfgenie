@@ -2,19 +2,38 @@
 
 import { ArrowRightLeft, Loader2, X } from "lucide-react";
 import JSZip from "jszip";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ToolShell } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
 import { MagneticButton } from "@/components/ui/MagneticButton";
-import { convertImageFormat } from "@/lib/image/convert-format";
+import { convertImageFormat, type ImageMime } from "@/lib/image/convert-format";
 import { downloadBlob } from "@/lib/pdf/download";
 
-export default function JpgToPngPage() {
+type Direction = "jpg-to-png" | "png-to-jpg";
+
+const DIRECTION_CONFIG: Record<
+  Direction,
+  { accept: string; targetMime: ImageMime; ext: string; label: string }
+> = {
+  "jpg-to-png": { accept: "image/jpeg", targetMime: "image/png", ext: "png", label: "Drop JPG images here, or click to browse" },
+  "png-to-jpg": { accept: "image/png", targetMime: "image/jpeg", ext: "jpg", label: "Drop PNG images here, or click to browse" },
+};
+
+export default function ConvertImageFormatPage() {
+  const [direction, setDirection] = useState<Direction>("jpg-to-png");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const config = DIRECTION_CONFIG[direction];
+
+  function switchDirection(next: Direction) {
+    setDirection(next);
+    setFiles([]);
+    setError(null);
+  }
 
   function addFiles(newFiles: File[]) {
     setFiles((prev) => [...prev, ...newFiles]);
@@ -35,19 +54,19 @@ export default function JpgToPngPage() {
     setBusy(true);
     setError(null);
     try {
-      const converted = await Promise.all(files.map((f) => convertImageFormat(f, "image/png")));
+      const converted = await Promise.all(files.map((f) => convertImageFormat(f, config.targetMime)));
 
       if (converted.length === 1) {
         const baseName = files[0].name.replace(/\.[^.]+$/, "");
-        downloadBlob(converted[0], `${baseName}.png`);
+        downloadBlob(converted[0], `${baseName}.${config.ext}`);
       } else {
         const zip = new JSZip();
         converted.forEach((blob, i) => {
           const baseName = files[i].name.replace(/\.[^.]+$/, "");
-          zip.file(`${baseName}.png`, blob);
+          zip.file(`${baseName}.${config.ext}`, blob);
         });
         const zipBlob = await zip.generateAsync({ type: "blob" });
-        downloadBlob(zipBlob, "converted-png.zip");
+        downloadBlob(zipBlob, `converted-${config.ext}.zip`);
       }
     } catch {
       setError("Something went wrong converting those images.");
@@ -59,16 +78,20 @@ export default function JpgToPngPage() {
   return (
     <ToolShell
       icon={ArrowRightLeft}
-      title="JPG to PNG"
-      description="Convert JPG images to PNG — batch as many as you like."
+      title="Convert Image Format"
+      description="Convert between JPG and PNG — batch as many as you like."
     >
+      <div className="mb-8 inline-flex rounded-full border border-brand-brown-dark/10 bg-white p-1">
+        <TabButton active={direction === "jpg-to-png"} onClick={() => switchDirection("jpg-to-png")}>
+          JPG → PNG
+        </TabButton>
+        <TabButton active={direction === "png-to-jpg"} onClick={() => switchDirection("png-to-jpg")}>
+          PNG → JPG
+        </TabButton>
+      </div>
+
       {files.length === 0 && (
-        <Dropzone
-          accept="image/jpeg"
-          multiple
-          onFiles={addFiles}
-          label="Drop JPG images here, or click to browse"
-        />
+        <Dropzone accept={config.accept} multiple onFiles={addFiles} label={config.label} />
       )}
 
       {files.length > 0 && (
@@ -79,7 +102,7 @@ export default function JpgToPngPage() {
             ))}
           </div>
 
-          <Dropzone accept="image/jpeg" multiple onFiles={addFiles} label="Add more images" />
+          <Dropzone accept={config.accept} multiple onFiles={addFiles} label="Add more images" />
 
           {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
 
@@ -108,5 +131,20 @@ export default function JpgToPngPage() {
 
       <PrivacyNote />
     </ToolShell>
+  );
+}
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      data-hover="true"
+      onClick={onClick}
+      className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
+        active ? "bg-brand-blue-deep text-white" : "text-brand-brown-dark/60 hover:text-brand-brown-dark"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

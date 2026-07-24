@@ -13,15 +13,12 @@ import {
   Stamp,
   Scaling,
   Type,
-  FileText,
   FileType,
   Images,
   FileUp,
-  FileDown,
   Mail,
   RotateCw,
   FileSpreadsheet,
-  Table,
   ScanText,
   FileEdit,
   FormInput,
@@ -62,9 +59,9 @@ export const CORE_TOOLS: Tool[] = [
     copy: "Shrink file size while keeping it readable.",
   },
   {
-    href: "/tools/convert",
+    href: "/tools/convert-image",
     icon: RefreshCw,
-    title: "Convert",
+    title: "Convert Image",
     copy: "Turn PDF pages into JPG or PNG images, or turn JPG/PNG images into a PDF.",
   },
   {
@@ -170,16 +167,10 @@ export const ORGANIZE_TOOLS: Tool[] = [
 
 export const CONVERT_TOOLS: Tool[] = [
   {
-    href: "/tools/pdf-to-text",
-    icon: FileText,
-    title: "PDF to text",
-    copy: "Pull the selectable text out of a PDF into a .txt file.",
-  },
-  {
-    href: "/tools/text-to-pdf",
+    href: "/tools/convert-text",
     icon: FileType,
-    title: "Text to PDF",
-    copy: "Type or paste text and turn it into a clean PDF.",
+    title: "Convert Text",
+    copy: "Pull the text out of a PDF, or turn plain text into a PDF.",
   },
   {
     href: "/tools/extract-images",
@@ -188,28 +179,16 @@ export const CONVERT_TOOLS: Tool[] = [
     copy: "Pull every embedded image out of a PDF as separate files.",
   },
   {
-    href: "/tools/word-to-pdf",
+    href: "/tools/convert-word",
     icon: FileUp,
-    title: "Word to PDF",
-    copy: "Turn a .docx file into a PDF.",
+    title: "Convert Word",
+    copy: "Turn a .docx into a PDF, or a PDF into an editable .docx.",
   },
   {
-    href: "/tools/pdf-to-word",
-    icon: FileDown,
-    title: "PDF to Word",
-    copy: "Turn a PDF into an editable .docx file.",
-  },
-  {
-    href: "/tools/pdf-to-excel",
+    href: "/tools/convert-excel",
     icon: FileSpreadsheet,
-    title: "PDF to Excel",
-    copy: "Pull a PDF's text into a spreadsheet, one row per line.",
-  },
-  {
-    href: "/tools/excel-to-pdf",
-    icon: Table,
-    title: "Excel to PDF",
-    copy: "Turn a spreadsheet's first sheet into a PDF table.",
+    title: "Convert Excel",
+    copy: "Turn a spreadsheet into a PDF table, or a PDF into a spreadsheet.",
   },
   {
     href: "/tools/ocr-pdf",
@@ -218,10 +197,10 @@ export const CONVERT_TOOLS: Tool[] = [
     copy: "Turn a scanned PDF into a searchable one with selectable text.",
   },
   {
-    href: "/tools/image-to-text",
+    href: "/tools/image-text",
     icon: ScanLine,
-    title: "Image to text",
-    copy: "Pull the text out of a photo, screenshot, or scan.",
+    title: "Image & Text",
+    copy: "Pull the text out of an image, or turn text into a shareable image.",
   },
 ];
 
@@ -260,10 +239,10 @@ export const MORE_TOOLS: Tool[] = [
     copy: "Turn any text or link into a downloadable QR code.",
   },
   {
-    href: "/tools/jpg-to-png",
+    href: "/tools/convert-image-format",
     icon: ArrowRightLeft,
-    title: "JPG to PNG",
-    copy: "Convert JPG images to PNG — batch as many as you like.",
+    title: "Convert Image Format",
+    copy: "Convert between JPG and PNG — batch as many as you like.",
   },
   {
     href: "/tools/resize-jpg",

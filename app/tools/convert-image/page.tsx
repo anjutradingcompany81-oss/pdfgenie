@@ -12,14 +12,14 @@ import { downloadBlob, bytesToBlob } from "@/lib/pdf/download";
 
 type Direction = "pdf-to-image" | "image-to-pdf";
 
-export default function ConvertPage() {
+export default function ConvertImagePage() {
   const [direction, setDirection] = useState<Direction>("pdf-to-image");
 
   return (
     <ToolShell
       icon={RefreshCw}
-      title="Convert PDFs"
-      description="Turn PDF pages into images, or combine images into a PDF."
+      title="Convert Image"
+      description="Turn PDF pages into JPG or PNG images, or combine images into a PDF."
     >
       <div className="mb-8 inline-flex rounded-full border border-brand-brown-dark/10 bg-white p-1">
         <TabButton
@@ -123,7 +123,7 @@ function PdfToImage() {
             </div>
           </div>
 
-          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+          {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
 
           <MagneticButton onClick={handleConvert} disabled={busy}>
             {busy ? (
@@ -190,7 +190,7 @@ function ImageToPdf() {
         </div>
       )}
 
-      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+      {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
 
       <MagneticButton onClick={handleConvert} disabled={busy || files.length === 0}>
         {busy ? (
