@@ -79,7 +79,7 @@ export function SearchTools({
   const isDark = variant === "dark";
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative min-w-0 shrink ${className}`}>
       <div
         className={`flex items-center gap-2 rounded-full border px-4 py-2 transition-colors ${
           isDark
@@ -107,7 +107,7 @@ export function SearchTools({
           aria-controls="tool-search-results"
           aria-autocomplete="list"
           autoComplete="off"
-          className={`w-full bg-transparent text-sm focus:outline-none lg:w-48 ${
+          className={`w-full min-w-0 bg-transparent text-sm focus:outline-none lg:w-24 xl:w-40 ${
             isDark ? "text-white placeholder:text-white/40" : "text-brand-brown-dark placeholder:text-brand-brown-dark/40"
           }`}
         />
