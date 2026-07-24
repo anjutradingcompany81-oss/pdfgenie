@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { SearchTools } from "@/components/tools/SearchTools";
 import { fadeUp, staggerContainer } from "@/lib/motion";
 
 export function Hero() {
@@ -33,15 +34,9 @@ export function Hero() {
           PDF tooling, reimagined
         </motion.p>
 
-        <div className="overflow-hidden">
-          <motion.h1
-            variants={fadeUp}
-            className="text-4xl font-bold leading-[0.98] tracking-tight text-brand-brown-dark sm:text-5xl lg:text-6xl"
-          >
-            Every PDF task,{" "}
-            <span className="text-brand-blue-deep">one calm tool.</span>
-          </motion.h1>
-        </div>
+        <motion.div variants={fadeUp} className="max-w-xl">
+          <SearchTools variant="light" size="lg" className="w-full" />
+        </motion.div>
 
         <motion.p
           variants={fadeUp}

@@ -12,9 +12,6 @@ export function ToolsShowcase() {
           <span className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-blue-deep">
             Everything, in one tool
           </span>
-          <h2 className="mt-3 text-2xl font-bold tracking-tight text-brand-brown-dark sm:text-4xl">
-            Built for the PDF work you actually do.
-          </h2>
         </Reveal>
 
         <ToolSection
@@ -22,7 +19,7 @@ export function ToolsShowcase() {
           title="Reach your whole list"
           tools={AUTOMATE_TOOLS}
           accent="from-fuchsia-500 to-pink-500"
-          className="mt-10"
+          className="mt-6"
         />
         <ToolSection
           eyebrow="Core tools"

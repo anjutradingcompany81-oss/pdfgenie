@@ -9,10 +9,12 @@ import { allTools } from "@/lib/tools";
 export function SearchTools({
   className = "",
   variant = "light",
+  size = "sm",
   onNavigate,
 }: {
   className?: string;
   variant?: "light" | "dark";
+  size?: "sm" | "lg";
   onNavigate?: () => void;
 }) {
   const router = useRouter();
@@ -77,17 +79,20 @@ export function SearchTools({
   }
 
   const isDark = variant === "dark";
+  const isLg = size === "lg";
 
   return (
     <div ref={containerRef} className={`relative min-w-0 shrink ${className}`}>
       <div
-        className={`flex items-center gap-2 rounded-full border px-4 py-2 transition-colors ${
+        className={`flex items-center gap-3 rounded-full border transition-colors ${
+          isLg ? "px-6 py-4 shadow-lg shadow-brand-blue-deep/5" : "px-4 py-2"
+        } ${
           isDark
             ? "border-white/25 bg-white/10 focus-within:border-white/50"
             : "border-brand-brown-dark/15 bg-white focus-within:border-brand-blue"
         }`}
       >
-        <Search size={15} className={`shrink-0 ${isDark ? "text-white/50" : "text-brand-brown-dark/40"}`} />
+        <Search size={isLg ? 20 : 15} className={`shrink-0 ${isDark ? "text-white/50" : "text-brand-brown-dark/40"}`} />
         <input
           ref={inputRef}
           type="text"
@@ -99,7 +104,7 @@ export function SearchTools({
           }}
           onFocus={() => query && setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search tools…"
+          placeholder={isLg ? "Search for a tool… (merge, compress, sign, convert…)" : "Search tools…"}
           aria-label="Search tools"
           aria-expanded={open && results.length > 0}
           aria-haspopup="listbox"
@@ -107,7 +112,9 @@ export function SearchTools({
           aria-controls="tool-search-results"
           aria-autocomplete="list"
           autoComplete="off"
-          className={`w-full min-w-0 bg-transparent text-sm focus:outline-none lg:w-24 xl:w-40 ${
+          className={`w-full min-w-0 bg-transparent focus:outline-none ${
+            isLg ? "text-base sm:text-lg" : "text-sm lg:w-24 xl:w-40"
+          } ${
             isDark ? "text-white placeholder:text-white/40" : "text-brand-brown-dark placeholder:text-brand-brown-dark/40"
           }`}
         />
@@ -120,7 +127,7 @@ export function SearchTools({
               inputRef.current?.focus();
             }}
           >
-            <X size={13} className={isDark ? "text-white/50 hover:text-white" : "text-brand-brown-dark/40 hover:text-brand-brown-dark"} />
+            <X size={isLg ? 18 : 13} className={isDark ? "text-white/50 hover:text-white" : "text-brand-brown-dark/40 hover:text-brand-brown-dark"} />
           </button>
         )}
       </div>
@@ -129,7 +136,9 @@ export function SearchTools({
         <div
           id="tool-search-results"
           role="listbox"
-          className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-brand-brown-dark/10 bg-white py-2 shadow-lg"
+          className={`absolute top-full z-50 mt-2 overflow-hidden rounded-2xl border border-brand-brown-dark/10 bg-white py-2 shadow-lg ${
+            isLg ? "left-0 right-0" : "right-0 w-72"
+          }`}
         >
           {results.length === 0 ? (
             <p className="px-4 py-3 text-sm text-brand-brown-dark/50">No tools found for &quot;{query}&quot;.</p>
