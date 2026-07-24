@@ -36,6 +36,10 @@ import {
   Minimize2,
   Sparkles,
   QrCode,
+  ImageUp,
+  ArrowRightLeft,
+  Maximize2,
+  Shrink,
 } from "lucide-react";
 import type { Tool } from "@/components/tools/ToolCard";
 
@@ -238,6 +242,12 @@ export const CONVERT_TOOLS: Tool[] = [
     title: "Image to text",
     copy: "Pull the text out of a photo, screenshot, or scan.",
   },
+  {
+    href: "/tools/jpg-to-pdf",
+    icon: ImageUp,
+    title: "JPG to PDF",
+    copy: "Combine one or more JPG photos into a single PDF.",
+  },
 ];
 
 export const AUTOMATE_TOOLS: Tool[] = [
@@ -273,5 +283,23 @@ export const MORE_TOOLS: Tool[] = [
     icon: QrCode,
     title: "QR code generator",
     copy: "Turn any text or link into a downloadable QR code.",
+  },
+  {
+    href: "/tools/jpg-to-png",
+    icon: ArrowRightLeft,
+    title: "JPG to PNG",
+    copy: "Convert JPG images to PNG — batch as many as you like.",
+  },
+  {
+    href: "/tools/resize-jpg",
+    icon: Maximize2,
+    title: "Resize JPG",
+    copy: "Set new dimensions and download a resized copy.",
+  },
+  {
+    href: "/tools/compress-jpg",
+    icon: Shrink,
+    title: "Compress JPG",
+    copy: "Shrink JPG file size — batch as many as you like.",
   },
 ];
