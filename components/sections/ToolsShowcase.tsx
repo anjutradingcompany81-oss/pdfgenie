@@ -6,13 +6,13 @@ import { AUTOMATE_TOOLS, CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS } from "@/lib
 
 export function ToolsShowcase() {
   return (
-    <section id="features" className="px-6 py-28 lg:px-10">
+    <section id="features" className="px-6 py-16 lg:px-10">
       <div className="mx-auto max-w-7xl">
         <Reveal className="max-w-2xl">
-          <span className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-blue-deep">
+          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-blue-deep">
             Everything, in one tool
           </span>
-          <h2 className="mt-4 text-4xl font-bold tracking-tight text-brand-brown-dark sm:text-6xl">
+          <h2 className="mt-3 text-2xl font-bold tracking-tight text-brand-brown-dark sm:text-4xl">
             Built for the PDF work you actually do.
           </h2>
         </Reveal>
@@ -21,13 +21,29 @@ export function ToolsShowcase() {
           eyebrow="Automate"
           title="Reach your whole list"
           tools={AUTOMATE_TOOLS}
-          className="mt-16"
+          accent="from-fuchsia-500 to-pink-500"
+          className="mt-10"
         />
-        <ToolSection eyebrow="Core tools" title="The essentials" tools={CORE_TOOLS} />
-        <ToolSection eyebrow="Organize PDF" title="Rework a PDF's pages" tools={ORGANIZE_TOOLS} />
-        <ToolSection eyebrow="Convert PDF" title="Move between formats" tools={CONVERT_TOOLS} />
+        <ToolSection
+          eyebrow="Core tools"
+          title="The essentials"
+          tools={CORE_TOOLS}
+          accent="from-brand-blue to-brand-blue-deep"
+        />
+        <ToolSection
+          eyebrow="Organize PDF"
+          title="Rework a PDF's pages"
+          tools={ORGANIZE_TOOLS}
+          accent="from-amber-500 to-orange-500"
+        />
+        <ToolSection
+          eyebrow="Convert PDF"
+          title="Move between formats"
+          tools={CONVERT_TOOLS}
+          accent="from-emerald-500 to-teal-500"
+        />
 
-        <Reveal className="mt-16 flex justify-center">
+        <Reveal className="mt-10 flex justify-center">
           <Link
             href="/tools"
             data-hover="true"
