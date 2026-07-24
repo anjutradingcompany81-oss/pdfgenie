@@ -16,11 +16,11 @@ type Job = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  COMPLETED: "bg-green-100 text-green-700",
-  FAILED: "bg-red-100 text-red-700",
-  SENDING: "bg-amber-100 text-amber-700",
-  PENDING: "bg-brand-brown-dark/5 text-brand-brown-dark/60",
-  BLOCKED: "bg-red-100 text-red-700",
+  COMPLETED: "bg-status-success/10 text-status-success",
+  FAILED: "bg-status-danger/10 text-status-danger",
+  SENDING: "bg-status-warning/10 text-status-warning",
+  PENDING: "bg-brand-brown-dark/5 text-brand-brown-dark/70",
+  BLOCKED: "bg-status-danger/10 text-status-danger",
 };
 
 export default function MailMergeHistoryPage() {
@@ -106,11 +106,11 @@ export default function MailMergeHistoryPage() {
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-brand-brown-dark/10 bg-white">
         {jobs.length === 0 ? (
-          <p className="p-6 text-sm text-brand-brown-dark/55">No jobs found.</p>
+          <p className="p-6 text-sm text-brand-brown-dark/70">No jobs found.</p>
         ) : (
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
-              <tr className="border-b border-brand-brown-dark/10 text-xs uppercase tracking-wide text-brand-brown-dark/45">
+              <tr className="border-b border-brand-brown-dark/10 text-xs uppercase tracking-wide text-brand-brown-dark/70">
                 <th className="px-4 py-3">Job ID</th>
                 <th className="px-4 py-3">Sender</th>
                 <th className="px-4 py-3">Recipients</th>
@@ -140,7 +140,7 @@ export default function MailMergeHistoryPage() {
                       {job.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-brand-brown-dark/50">
+                  <td className="px-4 py-3 text-brand-brown-dark/70">
                     {new Date(job.createdAt).toLocaleString()}
                   </td>
                 </tr>

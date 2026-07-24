@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Check } from "lucide-react";
 import { motion } from "framer-motion";
@@ -81,7 +81,7 @@ export function Pricing() {
                 <h3 className="text-lg font-bold">{tier.name}</h3>
                 <p
                   className={`mt-2 text-sm ${
-                    tier.highlighted ? "text-white/70" : "text-brand-brown-dark/60"
+                    tier.highlighted ? "text-white/70" : "text-brand-brown-dark/70"
                   }`}
                 >
                   {tier.description}
@@ -90,7 +90,7 @@ export function Pricing() {
                 <div className="mt-6 flex items-baseline gap-1">
                   <span className="text-5xl font-bold">{tier.price}</span>
                   <span
-                    className={tier.highlighted ? "text-white/60" : "text-brand-brown-dark/50"}
+                    className={tier.highlighted ? "text-white/60" : "text-brand-brown-dark/70"}
                   >
                     {tier.period}
                   </span>

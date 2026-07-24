@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Vendored worker copied from pdfjs-dist, not our source.
     "public/pdf.worker.min.mjs",
+    // Isolated agent worktrees (created under .claude/worktrees/ for
+    // background subagent tasks) are full repo checkouts, not our source.
+    ".claude/worktrees/**",
   ]),
 ]);
 

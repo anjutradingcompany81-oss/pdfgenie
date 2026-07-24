@@ -31,7 +31,7 @@ export default async function AdminDashboardHome() {
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight text-brand-brown-dark">Dashboard</h1>
-      <p className="mt-2 text-brand-brown-dark/60">An overview of your site.</p>
+      <p className="mt-2 text-brand-brown-dark/70">An overview of your site.</p>
 
       <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard icon={Users} label="Total users" value={String(totalUsers)} />
@@ -60,7 +60,7 @@ export default async function AdminDashboardHome() {
       <div className="mt-10 rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
         <h2 className="text-lg font-bold text-brand-brown-dark">Most-used tools</h2>
         {popularTools.length === 0 ? (
-          <p className="mt-3 text-sm text-brand-brown-dark/55">No tool usage recorded yet.</p>
+          <p className="mt-3 text-sm text-brand-brown-dark/70">No tool usage recorded yet.</p>
         ) : (
           <ul className="mt-4 space-y-2">
             {popularTools.map((tool) => (
@@ -69,7 +69,7 @@ export default async function AdminDashboardHome() {
                 className="flex items-center justify-between border-b border-brand-brown-dark/5 pb-2 text-sm last:border-0"
               >
                 <span className="text-brand-brown-dark">{tool.toolSlug}</span>
-                <span className="font-semibold text-brand-brown-dark/60">
+                <span className="font-semibold text-brand-brown-dark/70">
                   {tool._count.toolSlug} uses
                 </span>
               </li>

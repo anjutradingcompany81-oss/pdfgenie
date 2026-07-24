@@ -3,11 +3,14 @@ import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { clientIp, isThrottled } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 const WHISPER_URL = "http://127.0.0.1:5006/transcribe";
 const MAX_BYTES = 300 * 1024 * 1024;
+const THROTTLE_MAX = 6;
+const THROTTLE_WINDOW_MS = 10 * 60 * 1000;
 
 function extractAudio(inputPath: string, outputPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -33,6 +36,13 @@ function extractAudio(inputPath: string, outputPath: string): Promise<void> {
 }
 
 export async function POST(request: Request) {
+  if (isThrottled(`video-to-text:${clientIp(request)}`, THROTTLE_MAX, THROTTLE_WINDOW_MS)) {
+    return NextResponse.json(
+      { error: "Too many transcription jobs from this connection — please wait a few minutes and try again." },
+      { status: 429 }
+    );
+  }
+
   const formData = await request.formData();
   const file = formData.get("video");
 

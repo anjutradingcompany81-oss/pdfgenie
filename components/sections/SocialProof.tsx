@@ -32,7 +32,7 @@ export function SocialProof() {
     <section className="px-6 py-24 lg:px-10">
       <div className="mx-auto max-w-7xl">
         <Reveal className="text-center">
-          <span className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-brown-dark/50">
+          <span className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-brown-dark/70">
             Trusted by teams who move fast
           </span>
         </Reveal>
@@ -48,7 +48,7 @@ export function SocialProof() {
                 <blockquote className="text-xl font-semibold leading-relaxed text-brand-brown-dark sm:text-2xl">
                   &ldquo;{t.quote}&rdquo;
                 </blockquote>
-                <figcaption className="mt-6 text-sm text-brand-brown-dark/60">
+                <figcaption className="mt-6 text-sm text-brand-brown-dark/70">
                   <span className="font-semibold text-brand-blue-deep">{t.name}</span>{" "}
                   — {t.role}
                 </figcaption>

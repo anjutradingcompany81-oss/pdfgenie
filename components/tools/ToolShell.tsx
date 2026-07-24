@@ -10,13 +10,24 @@ type ToolShellProps = {
 };
 
 export function ToolShell({ icon: Icon, title, description, children }: ToolShellProps) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: `${title} — PDF Genie`,
+    description,
+    applicationCategory: "Utility",
+    operatingSystem: "Any (Web-based)",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  };
+
   return (
     <div className="min-h-[100svh] px-6 pb-28 pt-32 lg:px-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="mx-auto max-w-4xl">
         <Link
           href="/tools"
           data-hover="true"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-brand-brown-dark/60 transition-colors hover:text-brand-blue-deep"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-brand-brown-dark/70 transition-colors hover:text-brand-blue-deep"
         >
           <ArrowLeft size={16} />
           All tools

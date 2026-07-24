@@ -98,7 +98,7 @@ export default function AdminDashboardLoginPage() {
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-brown-dark/40 hover:text-brand-brown-dark"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-brown-dark/70 hover:text-brand-brown-dark"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -115,7 +115,7 @@ export default function AdminDashboardLoginPage() {
             Remember me
           </label>
 
-          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+          {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
 
           <MagneticButton type="submit" disabled={loading} className="w-full justify-center">
             {loading ? (

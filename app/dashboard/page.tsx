@@ -60,10 +60,10 @@ export default async function DashboardPage() {
                 )}
                 <div className="min-w-0">
                   <p className="truncate font-bold text-brand-brown-dark">{user?.name}</p>
-                  <p className="truncate text-sm text-brand-brown-dark/60">{user?.email}</p>
+                  <p className="truncate text-sm text-brand-brown-dark/70">{user?.email}</p>
                 </div>
               </div>
-              <p className="mt-4 text-xs text-brand-brown-dark/45">
+              <p className="mt-4 text-xs text-brand-brown-dark/70">
                 Member since {memberSince}
               </p>
               <Link
@@ -80,16 +80,16 @@ export default async function DashboardPage() {
             <div className="rounded-3xl border border-brand-brown-dark/10 bg-white p-6">
               <h2 className="text-lg font-bold text-brand-brown-dark">Recent activity</h2>
               {recentActivity.length === 0 ? (
-                <p className="mt-3 text-sm text-brand-brown-dark/55">
+                <p className="mt-3 text-sm text-brand-brown-dark/70">
                   Nothing yet — the tools you use will show up here.
                 </p>
               ) : (
                 <ul className="mt-4 space-y-3">
                   {recentActivity.map((event) => (
                     <li key={event.id} className="flex items-center gap-3 text-sm">
-                      <Clock size={14} className="shrink-0 text-brand-brown-dark/40" />
+                      <Clock size={14} className="shrink-0 text-brand-brown-dark/70" />
                       <span className="text-brand-brown-dark">{event.toolSlug}</span>
-                      <span className="text-brand-brown-dark/40">
+                      <span className="text-brand-brown-dark/70">
                         {event.createdAt.toLocaleString()}
                       </span>
                     </li>

@@ -118,7 +118,7 @@ export function SiteSettingsForm({ initial }: { initial: Settings }) {
         />
         Maintenance mode
       </label>
-      <p className="-mt-3 text-xs text-brand-brown-dark/45">
+      <p className="-mt-3 text-xs text-brand-brown-dark/70">
         Saved and available to the app, but not yet enforced anywhere on the public site — no page
         currently checks this flag.
       </p>

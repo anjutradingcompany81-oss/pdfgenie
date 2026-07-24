@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { clientIp, isThrottled } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,8 @@ const CRF_BY_QUALITY: Record<string, string> = {
   balanced: "26",
   small: "32",
 };
+const THROTTLE_MAX = 6;
+const THROTTLE_WINDOW_MS = 10 * 60 * 1000;
 
 // Video compression can't run client-side the way every other tool in this
 // app does (no free, fast, in-browser transcoder for arbitrary uploads) —
@@ -21,6 +24,13 @@ const CRF_BY_QUALITY: Record<string, string> = {
 // the "never uploaded anywhere" privacy note other tools show would be
 // false here, so the page has its own honest copy instead.
 export async function POST(request: Request) {
+  if (isThrottled(`compress-video:${clientIp(request)}`, THROTTLE_MAX, THROTTLE_WINDOW_MS)) {
+    return NextResponse.json(
+      { error: "Too many video jobs from this connection — please wait a few minutes and try again." },
+      { status: 429 }
+    );
+  }
+
   const formData = await request.formData();
   const file = formData.get("video");
   const quality = String(formData.get("quality") ?? "balanced");

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,7 +30,7 @@ export function AdminSidebar({ name }: { name?: string | null }) {
           <p className="text-lg font-bold text-brand-brown-dark">
             PDF<span className="text-brand-blue">Genie</span>
           </p>
-          <p className="mt-1 text-xs text-brand-brown-dark/50">{name}</p>
+          <p className="mt-1 text-xs text-brand-brown-dark/70">{name}</p>
         </div>
       </div>
 
@@ -59,7 +59,7 @@ export function AdminSidebar({ name }: { name?: string | null }) {
         type="button"
         data-hover="true"
         onClick={() => signOut({ callbackUrl: "/" })}
-        className="mt-6 hidden items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold text-brand-brown-dark/60 hover:bg-brand-cream lg:flex"
+        className="mt-6 hidden items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold text-brand-brown-dark/70 hover:bg-brand-cream lg:flex"
       >
         <LogOut size={16} />
         Log out

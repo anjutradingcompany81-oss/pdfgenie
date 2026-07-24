@@ -4,10 +4,12 @@ import { motion } from "framer-motion";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useRef } from "react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { Avatar } from "@/components/ui/Avatar";
 import { SearchTools } from "@/components/tools/SearchTools";
 import { MobileToolCategories } from "@/components/tools/MobileToolCategories";
+import { useModalA11y } from "@/components/ui/useModalA11y";
 import { toolCategories } from "@/lib/tools";
 
 const MARKETING_LINKS = [
@@ -30,10 +32,17 @@ export function MobileMenu({
   userImage?: string | null;
 }) {
   const pathname = usePathname();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalA11y(panelRef, true, onClose);
 
   return (
     <motion.div
-      className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-brand-blue-deep px-6 py-6 text-white lg:hidden"
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menu"
+      tabIndex={-1}
+      className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-brand-blue-deep px-6 py-6 text-white outline-none lg:hidden"
       initial={{ clipPath: "inset(0 0 100% 0)" }}
       animate={{ clipPath: "inset(0 0 0% 0)" }}
       exit={{ clipPath: "inset(0 0 100% 0)" }}

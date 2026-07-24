@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Download, FileText, Loader2 } from "lucide-react";
 import { use, useEffect, useState } from "react";
@@ -53,7 +53,7 @@ export default function MailMergeJobDetailPage({
   if (loading) {
     return (
       <ToolShell icon={FileText} title="Job details" description="">
-        <Loader2 size={20} className="animate-spin text-brand-brown-dark/40" />
+        <Loader2 size={20} className="animate-spin text-brand-brown-dark/70" />
       </ToolShell>
     );
   }
@@ -61,7 +61,7 @@ export default function MailMergeJobDetailPage({
   if (!job) {
     return (
       <ToolShell icon={FileText} title="Job not found" description="">
-        <p className="text-sm text-brand-brown-dark/60">
+        <p className="text-sm text-brand-brown-dark/70">
           This job doesn&apos;t exist, or you don&apos;t have access to it.
         </p>
       </ToolShell>

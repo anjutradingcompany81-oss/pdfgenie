@@ -1,4 +1,4 @@
-import { FileText, X } from "lucide-react";
+﻿import { FileText, X } from "lucide-react";
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -22,7 +22,7 @@ export function FileChip({
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-brand-brown-dark">{name}</p>
-        <p className="text-xs text-brand-brown-dark/50">{formatSize(size)}</p>
+        <p className="text-xs text-brand-brown-dark/70">{formatSize(size)}</p>
       </div>
       {onRemove && (
         <button
@@ -30,7 +30,7 @@ export function FileChip({
           data-hover="true"
           onClick={onRemove}
           aria-label={`Remove ${name}`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-brand-brown-dark/40 transition-colors hover:bg-brand-brown-dark/5 hover:text-brand-brown-dark"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-brand-brown-dark/70 transition-colors hover:bg-brand-brown-dark/5 hover:text-brand-brown-dark"
         >
           <X size={16} />
         </button>

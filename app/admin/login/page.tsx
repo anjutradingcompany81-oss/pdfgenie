@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
           />
         </label>
 
-        {error && <p className="mt-4 text-sm font-medium text-red-600">{error}</p>}
+        {error && <p className="mt-4 text-sm font-medium text-status-danger">{error}</p>}
 
         <button
           type="submit"

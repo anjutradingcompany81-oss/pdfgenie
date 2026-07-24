@@ -57,17 +57,17 @@ export function FailedEmailReport({
   }
 
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+    <div className="rounded-2xl border border-status-danger/20 bg-status-danger/5 p-6">
       <div className="flex items-center gap-2">
-        <AlertTriangle size={16} className="text-red-600" />
-        <h3 className="text-sm font-bold text-red-700">Failed emails ({failedRecipients.length})</h3>
+        <AlertTriangle size={16} className="text-status-danger" />
+        <h3 className="text-sm font-bold text-status-danger">Failed emails ({failedRecipients.length})</h3>
       </div>
 
       <div className="mt-4 max-h-56 space-y-2 overflow-y-auto">
         {failedRecipients.map((r) => (
           <div key={r.id} className="rounded-xl bg-white p-3 text-sm">
             <p className="font-semibold text-brand-brown-dark">{r.email}</p>
-            <p className="mt-0.5 text-xs text-red-600">{r.error}</p>
+            <p className="mt-0.5 text-xs text-status-danger">{r.error}</p>
           </div>
         ))}
       </div>
@@ -91,7 +91,7 @@ export function FailedEmailReport({
             type="button"
             onClick={handleRetry}
             disabled={retrying}
-            className="flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+            className="flex items-center gap-1.5 rounded-full bg-status-danger px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
           >
             {retrying ? <Loader2 size={13} className="animate-spin" /> : <RotateCw size={13} />}
             Retry failed emails
@@ -99,7 +99,7 @@ export function FailedEmailReport({
           <button
             type="button"
             onClick={exportFailed}
-            className="flex items-center gap-1.5 rounded-full border border-red-300 px-4 py-2 text-xs font-semibold text-red-700"
+            className="flex items-center gap-1.5 rounded-full border border-status-danger/30 px-4 py-2 text-xs font-semibold text-status-danger"
           >
             <Download size={13} />
             Export failed records

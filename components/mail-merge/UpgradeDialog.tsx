@@ -1,8 +1,9 @@
 "use client";
 
 import { Check, Loader2, Sparkles, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { useModalA11y } from "@/components/ui/useModalA11y";
 
 const PREMIUM_HIGHLIGHTS = [
   "Unlimited email sending",
@@ -29,6 +30,8 @@ export function UpgradeDialog({
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalA11y(panelRef, open, onClose);
 
   if (!open) return null;
 
@@ -49,7 +52,14 @@ export function UpgradeDialog({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-brand-brown-dark/50 px-6 py-10">
-      <div className="w-full max-w-md rounded-3xl bg-white p-8">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-dialog-title"
+        tabIndex={-1}
+        className="w-full max-w-md rounded-3xl bg-white p-8 outline-none"
+      >
         <div className="flex items-start justify-between">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue-deep">
             <Sparkles size={22} />
@@ -58,13 +68,13 @@ export function UpgradeDialog({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-brand-brown-dark/40 hover:text-brand-brown-dark"
+            className="text-brand-brown-dark/70 hover:text-brand-brown-dark"
           >
             <X size={20} />
           </button>
         </div>
 
-        <h2 className="mt-4 text-2xl font-bold text-brand-brown-dark">{title}</h2>
+        <h2 id="upgrade-dialog-title" className="mt-4 text-2xl font-bold text-brand-brown-dark">{title}</h2>
         {message && <p className="mt-2 text-sm text-brand-brown-dark/65">{message}</p>}
 
         <p className="mt-4 text-sm font-semibold text-brand-brown-dark">Unlock:</p>
@@ -79,7 +89,7 @@ export function UpgradeDialog({
 
         <div className="mt-5 rounded-2xl border border-dashed border-brand-brown-dark/20 bg-brand-cream px-4 py-3">
           <p className="text-sm font-semibold text-brand-brown-dark">Coming soon</p>
-          <p className="mt-1 text-xs text-brand-brown-dark/60">
+          <p className="mt-1 text-xs text-brand-brown-dark/70">
             Payment and subscription management will be available in a future release.
           </p>
         </div>
@@ -106,7 +116,7 @@ export function UpgradeDialog({
         <button
           type="button"
           onClick={onClose}
-          className="mt-4 w-full text-center text-sm font-semibold text-brand-brown-dark/50 hover:text-brand-brown-dark"
+          className="mt-4 w-full text-center text-sm font-semibold text-brand-brown-dark/70 hover:text-brand-brown-dark"
         >
           Close
         </button>

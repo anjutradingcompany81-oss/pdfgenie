@@ -1,18 +1,29 @@
-"use client";
+import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
+import ToolClient from "./DeletePagesClient";
 
-import { FileX2 } from "lucide-react";
-import { PageRemovalTool } from "@/components/tools/PageRemovalTool";
+const TITLE = "Delete pages — PDF Genie";
+const DESCRIPTION = "Pick pages to delete and download the rest.";
+const PATH = "/tools/delete-pages";
 
-export default function DeletePagesPage() {
-  return (
-    <PageRemovalTool
-      icon={FileX2}
-      title="Delete PDF pages"
-      description="Pick the pages to delete and get back a PDF with just the rest."
-      selectionHint="Select at least one page to delete."
-      actionLabel="Delete selected pages"
-      actionLabelBusy="Deleting…"
-      outputFileName="pages-deleted.pdf"
-    />
-  );
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: `${SITE_URL}${PATH}` },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: `${SITE_URL}${PATH}`,
+    siteName: "PDF Genie",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+};
+
+export default function Page() {
+  return <ToolClient />;
 }

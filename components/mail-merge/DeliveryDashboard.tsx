@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Mail, TrendingUp, XCircle } from "lucide-react";
+﻿import { CheckCircle2, Clock, Mail, TrendingUp, XCircle } from "lucide-react";
 import { StatCard } from "@/components/admin-dashboard/StatCard";
 
 export type RecipientLike = {
@@ -21,7 +21,7 @@ function BarRow({
   const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
   return (
     <div className="flex items-center gap-3">
-      <span className="w-28 shrink-0 truncate text-xs text-brand-brown-dark/60">{label}</span>
+      <span className="w-28 shrink-0 truncate text-xs text-brand-brown-dark/70">{label}</span>
       <div className="h-3 flex-1 overflow-hidden rounded-full bg-brand-brown-dark/5">
         <div
           className={`h-full rounded-full ${colorClass}`}
@@ -94,9 +94,9 @@ export function DeliveryDashboard({
         <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
           <h3 className="text-sm font-bold text-brand-brown-dark">Success vs Failed</h3>
           <div className="mt-4 space-y-3">
-            <BarRow label="Sent" value={sent} max={total} colorClass="bg-green-500" />
-            <BarRow label="Failed" value={failed} max={total} colorClass="bg-red-500" />
-            <BarRow label="Pending" value={pending} max={total} colorClass="bg-amber-400" />
+            <BarRow label="Sent" value={sent} max={total} colorClass="bg-status-success" />
+            <BarRow label="Failed" value={failed} max={total} colorClass="bg-status-danger" />
+            <BarRow label="Pending" value={pending} max={total} colorClass="bg-status-warning" />
           </div>
         </div>
 

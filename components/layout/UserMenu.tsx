@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { LayoutDashboard, LogOut, Settings, User as UserIcon } from "lucide-react";
@@ -59,7 +59,7 @@ export function UserMenu({
             <Avatar image={image} size={36} iconSize={18} />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-brand-brown-dark">{name || "Account"}</p>
-              {email && <p className="truncate text-xs text-brand-brown-dark/50">{email}</p>}
+              {email && <p className="truncate text-xs text-brand-brown-dark/70">{email}</p>}
             </div>
           </div>
 
@@ -83,7 +83,7 @@ export function UserMenu({
             type="button"
             disabled
             title="Coming soon"
-            className="flex w-full cursor-not-allowed items-center gap-2 px-4 py-2.5 text-left text-sm text-brand-brown-dark/40"
+            className="flex w-full cursor-not-allowed items-center gap-2 px-4 py-2.5 text-left text-sm text-brand-brown-dark/70"
           >
             <Settings size={15} />
             Account Settings

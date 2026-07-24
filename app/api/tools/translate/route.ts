@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
+import { clientIp, isThrottled } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 const LIBRETRANSLATE_URL = "http://127.0.0.1:5005/translate";
 const MAX_CHARS = 5000;
+const THROTTLE_MAX = 30;
+const THROTTLE_WINDOW_MS = 10 * 60 * 1000;
 
 export async function POST(request: Request) {
+  if (isThrottled(`translate:${clientIp(request)}`, THROTTLE_MAX, THROTTLE_WINDOW_MS)) {
+    return NextResponse.json(
+      { error: "Too many translation requests from this connection — please wait a few minutes and try again." },
+      { status: 429 }
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const text = typeof body?.text === "string" ? body.text : "";
   const source = typeof body?.source === "string" ? body.source : "";

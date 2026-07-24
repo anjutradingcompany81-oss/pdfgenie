@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { RotateCw, Trash2, GripVertical } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent } from "react";
@@ -61,7 +61,7 @@ export function PageOrganizerGrid({
           <span className="absolute bottom-2 left-2 rounded-full bg-brand-brown-dark/80 px-2 py-0.5 text-xs font-semibold text-white">
             {index + 1}
           </span>
-          <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-brand-brown-dark/50">
+          <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/80 text-brand-brown-dark/70">
             <GripVertical size={14} />
           </span>
 

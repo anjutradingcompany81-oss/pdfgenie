@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
 export type Tool = {
@@ -30,7 +30,7 @@ export function ToolCard({
         <Icon size={22} strokeWidth={2} />
       </div>
       <h3 className="relative mt-4 text-base font-bold text-brand-brown-dark">{title}</h3>
-      <p className="relative mt-1.5 line-clamp-2 text-xs leading-relaxed text-brand-brown-dark/60">
+      <p className="relative mt-1.5 line-clamp-2 text-xs leading-relaxed text-brand-brown-dark/70">
         {copy}
       </p>
     </Link>

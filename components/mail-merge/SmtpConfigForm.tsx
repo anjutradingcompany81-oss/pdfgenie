@@ -106,7 +106,7 @@ export function SmtpConfigForm({
         />
         Use my own SMTP account
       </label>
-      <p className="mt-1 text-xs text-brand-brown-dark/50">
+      <p className="mt-1 text-xs text-brand-brown-dark/70">
         Leave unchecked to send from PDF Genie&apos;s configured address.
       </p>
 
@@ -123,7 +123,7 @@ export function SmtpConfigForm({
                 autoComplete="email"
                 className={`${inputClass} pl-9`}
               />
-              <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-brown-dark/30" />
+              <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-brown-dark/70" />
             </div>
             <div className="relative">
               <input
@@ -134,7 +134,7 @@ export function SmtpConfigForm({
                 autoComplete="off"
                 className={`${inputClass} pl-9`}
               />
-              <KeyRound size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-brown-dark/30" />
+              <KeyRound size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-brown-dark/70" />
             </div>
           </div>
 
@@ -196,7 +196,7 @@ export function SmtpConfigForm({
             </div>
           )}
 
-          <p className="flex items-start gap-2 text-xs text-brand-brown-dark/45">
+          <p className="flex items-start gap-2 text-xs text-brand-brown-dark/70">
             <ShieldCheck size={14} className="mt-0.5 shrink-0" />
             Never stored — used only in memory to send this one job, then discarded.
           </p>

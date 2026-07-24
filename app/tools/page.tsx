@@ -1,6 +1,18 @@
+import type { Metadata } from "next";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
 import { ToolSection } from "@/components/tools/ToolSection";
 import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, AUTOMATE_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
+import { SITE_URL } from "@/lib/site";
+
+const TITLE = "All Tools — PDF Genie";
+const DESCRIPTION = "Every PDF, image, and document tool in one place — merge, split, compress, convert, sign, and more. All free, all in your browser.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: `${SITE_URL}/tools` },
+  openGraph: { title: TITLE, description: DESCRIPTION, url: `${SITE_URL}/tools`, siteName: "PDF Genie", type: "website" },
+};
 
 export default function ToolsPage() {
   return (

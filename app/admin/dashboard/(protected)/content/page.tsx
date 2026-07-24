@@ -55,7 +55,7 @@ export default function AdminContentPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight text-brand-brown-dark">Content</h1>
-      <p className="mt-2 text-brand-brown-dark/60">
+      <p className="mt-2 text-brand-brown-dark/70">
         Edit the pages linked from the footer.
       </p>
 
@@ -69,7 +69,7 @@ export default function AdminContentPage() {
             className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
               active === slug
                 ? "bg-brand-blue-deep text-white"
-                : "bg-white text-brand-brown-dark/60 hover:text-brand-brown-dark"
+                : "bg-white text-brand-brown-dark/70 hover:text-brand-brown-dark"
             }`}
           >
             {LABELS[slug]}
@@ -79,7 +79,7 @@ export default function AdminContentPage() {
 
       <div className="mt-6 max-w-2xl rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-brand-brown-dark/60">
+          <div className="flex items-center gap-2 text-sm text-brand-brown-dark/70">
             <Loader2 size={16} className="animate-spin" />
             Loading…
           </div>
@@ -101,7 +101,7 @@ export default function AdminContentPage() {
                 rows={12}
                 className="w-full rounded-2xl border border-brand-brown-dark/15 px-5 py-4 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
               />
-              <p className="mt-1.5 text-xs text-brand-brown-dark/45">
+              <p className="mt-1.5 text-xs text-brand-brown-dark/70">
                 Plain text — separate paragraphs with a blank line.
               </p>
             </div>

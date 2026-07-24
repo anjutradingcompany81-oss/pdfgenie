@@ -61,30 +61,30 @@ export function EmailPreview({
 
       <dl className="mt-4 space-y-1.5 text-sm">
         <div className="flex gap-2">
-          <dt className="w-16 shrink-0 text-brand-brown-dark/45">To</dt>
+          <dt className="w-16 shrink-0 text-brand-brown-dark/70">To</dt>
           <dd className="text-brand-brown-dark">{recipient.email}</dd>
         </div>
         {cc && (
           <div className="flex gap-2">
-            <dt className="w-16 shrink-0 text-brand-brown-dark/45">CC</dt>
+            <dt className="w-16 shrink-0 text-brand-brown-dark/70">CC</dt>
             <dd className="text-brand-brown-dark">{cc}</dd>
           </div>
         )}
         {bcc && (
           <div className="flex gap-2">
-            <dt className="w-16 shrink-0 text-brand-brown-dark/45">BCC</dt>
+            <dt className="w-16 shrink-0 text-brand-brown-dark/70">BCC</dt>
             <dd className="text-brand-brown-dark">{bcc}</dd>
           </div>
         )}
         <div className="flex gap-2">
-          <dt className="w-16 shrink-0 text-brand-brown-dark/45">Subject</dt>
+          <dt className="w-16 shrink-0 text-brand-brown-dark/70">Subject</dt>
           <dd className="font-semibold text-brand-brown-dark">
             {renderTemplate(subjectTemplate, recipient.fields)}
           </dd>
         </div>
         {pdfPassword && (
           <div className="flex gap-2">
-            <dt className="w-16 shrink-0 text-brand-brown-dark/45">PDF pwd</dt>
+            <dt className="w-16 shrink-0 text-brand-brown-dark/70">PDF pwd</dt>
             <dd className="text-brand-brown-dark">{masked["PDF Password"] ?? "••••••"}</dd>
           </div>
         )}
@@ -105,7 +105,7 @@ export function EmailPreview({
       )}
 
       {missingAttachments.length > 0 && (
-        <p className="mt-3 flex items-start gap-1.5 text-xs font-medium text-red-600">
+        <p className="mt-3 flex items-start gap-1.5 text-xs font-medium text-status-danger">
           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
           Attachment not found among uploaded files: {missingAttachments.join(", ")}
         </p>
@@ -113,7 +113,7 @@ export function EmailPreview({
 
       <div
         className="prose prose-sm mt-4 max-w-none rounded-xl border border-brand-brown-dark/10 bg-brand-cream/30 p-4"
-        dangerouslySetInnerHTML={{ __html: renderTemplate(bodyTemplate, recipient.fields) }}
+        dangerouslySetInnerHTML={{ __html: renderTemplate(bodyTemplate, recipient.fields, { escapeHtml: true }) }}
       />
     </div>
   );

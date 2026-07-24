@@ -143,7 +143,7 @@ export async function validateAndSend(input: SendJobInput): Promise<SendJobResul
     if (!recipient) continue;
 
     const subject = renderTemplate(input.subjectTemplate, recipient.fields);
-    const html = renderTemplate(input.bodyTemplate, recipient.fields);
+    const html = renderTemplate(input.bodyTemplate, recipient.fields, { escapeHtml: true });
     const cc = findField(recipient.fields, "cc") || undefined;
     const bcc = findField(recipient.fields, "bcc") || undefined;
 

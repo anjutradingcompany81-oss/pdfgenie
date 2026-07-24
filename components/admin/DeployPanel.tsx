@@ -79,7 +79,7 @@ export function DeployPanel() {
         <button
           type="button"
           onClick={handleLogout}
-          className="shrink-0 text-sm font-semibold text-brand-brown-dark/60 hover:text-brand-brown-dark"
+          className="shrink-0 text-sm font-semibold text-brand-brown-dark/70 hover:text-brand-brown-dark"
         >
           Log out
         </button>
@@ -97,9 +97,9 @@ export function DeployPanel() {
       <p
         className={`mt-4 text-sm font-medium ${
           status.state === "error"
-            ? "text-red-600"
+            ? "text-status-danger"
             : status.state === "success"
-              ? "text-green-600"
+              ? "text-status-success"
               : "text-brand-brown-dark/70"
         }`}
       >

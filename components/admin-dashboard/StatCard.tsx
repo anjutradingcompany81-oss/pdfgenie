@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+﻿import type { LucideIcon } from "lucide-react";
 
 export function StatCard({
   icon: Icon,
@@ -17,8 +17,8 @@ export function StatCard({
         <Icon size={18} />
       </div>
       <p className="mt-4 text-2xl font-bold text-brand-brown-dark">{value}</p>
-      <p className="mt-1 text-sm text-brand-brown-dark/60">{label}</p>
-      {note && <p className="mt-1 text-xs text-brand-brown-dark/40">{note}</p>}
+      <p className="mt-1 text-sm text-brand-brown-dark/70">{label}</p>
+      {note && <p className="mt-1 text-xs text-brand-brown-dark/70">{note}</p>}
     </div>
   );
 }

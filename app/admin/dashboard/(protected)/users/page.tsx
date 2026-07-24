@@ -100,11 +100,11 @@ export default function AdminUsersPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight text-brand-brown-dark">Users</h1>
-      <p className="mt-2 text-brand-brown-dark/60">{users.length} shown</p>
+      <p className="mt-2 text-brand-brown-dark/70">{users.length} shown</p>
 
       <form onSubmit={handleSearchSubmit} className="mt-6 flex max-w-md items-center gap-3">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-brown-dark/40" />
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-brown-dark/70" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -123,16 +123,16 @@ export default function AdminUsersPage() {
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-brand-brown-dark/10 bg-white">
         {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-brand-brown-dark/60">
+          <div className="flex items-center gap-2 p-6 text-sm text-brand-brown-dark/70">
             <Loader2 size={16} className="animate-spin" />
             Loading…
           </div>
         ) : users.length === 0 ? (
-          <p className="p-6 text-sm text-brand-brown-dark/55">No users found.</p>
+          <p className="p-6 text-sm text-brand-brown-dark/70">No users found.</p>
         ) : (
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
-              <tr className="border-b border-brand-brown-dark/10 text-xs uppercase tracking-wide text-brand-brown-dark/45">
+              <tr className="border-b border-brand-brown-dark/10 text-xs uppercase tracking-wide text-brand-brown-dark/70">
                 <th className="px-5 py-3">User</th>
                 <th className="px-5 py-3">Role</th>
                 <th className="px-5 py-3">Status</th>
@@ -155,7 +155,7 @@ export default function AdminUsersPage() {
                       )}
                       <div className="min-w-0">
                         <p className="truncate font-semibold text-brand-brown-dark">{user.name}</p>
-                        <p className="truncate text-xs text-brand-brown-dark/50">{user.email}</p>
+                        <p className="truncate text-xs text-brand-brown-dark/70">{user.email}</p>
                       </div>
                     </div>
                   </td>
@@ -178,13 +178,13 @@ export default function AdminUsersPage() {
                   <td className="px-5 py-4">
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                        user.disabled ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                        user.disabled ? "bg-status-danger/10 text-status-danger" : "bg-status-success/10 text-status-success"
                       }`}
                     >
                       {user.disabled ? "Disabled" : "Active"}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-brand-brown-dark/60">
+                  <td className="px-5 py-4 text-brand-brown-dark/70">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-5 py-4">
@@ -195,7 +195,7 @@ export default function AdminUsersPage() {
                         title="Reset password"
                         disabled={busyId === user.id}
                         onClick={() => resetPassword(user)}
-                        className="rounded-full p-2 text-brand-brown-dark/50 hover:bg-brand-cream hover:text-brand-blue-deep"
+                        className="rounded-full p-2 text-brand-brown-dark/70 hover:bg-brand-cream hover:text-brand-blue-deep"
                       >
                         <KeyRound size={15} />
                       </button>
@@ -205,7 +205,7 @@ export default function AdminUsersPage() {
                         title={user.disabled ? "Enable" : "Disable"}
                         disabled={busyId === user.id}
                         onClick={() => toggleDisabled(user)}
-                        className="rounded-full p-2 text-brand-brown-dark/50 hover:bg-brand-cream hover:text-brand-blue-deep"
+                        className="rounded-full p-2 text-brand-brown-dark/70 hover:bg-brand-cream hover:text-brand-blue-deep"
                       >
                         {user.disabled ? <CheckCircle2 size={15} /> : <Ban size={15} />}
                       </button>
@@ -215,13 +215,13 @@ export default function AdminUsersPage() {
                         title="Delete"
                         disabled={busyId === user.id}
                         onClick={() => deleteUser(user)}
-                        className="rounded-full p-2 text-brand-brown-dark/50 hover:bg-red-50 hover:text-red-600"
+                        className="rounded-full p-2 text-brand-brown-dark/70 hover:bg-status-danger/5 hover:text-status-danger"
                       >
                         <Trash2 size={15} />
                       </button>
                     </div>
                     {resetLink?.userId === user.id && (
-                      <p className="mt-2 max-w-xs text-right text-xs text-brand-brown-dark/60">
+                      <p className="mt-2 max-w-xs text-right text-xs text-brand-brown-dark/70">
                         {resetLink.emailed ? "Emailed. " : "Email not sent (SMTP not configured) — share this link: "}
                         <a href={resetLink.url} className="break-all text-brand-blue-deep underline">
                           {resetLink.url}

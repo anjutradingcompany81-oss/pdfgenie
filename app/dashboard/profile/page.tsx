@@ -144,8 +144,8 @@ export default function ProfilePage() {
                   className="sr-only"
                   onChange={(e) => handleAvatarChange(e.target.files?.[0])}
                 />
-                <p className="mt-1 text-xs text-brand-brown-dark/45">PNG, JPG, or WebP — up to 2MB.</p>
-                {avatarError && <p className="mt-1 text-xs text-red-600">{avatarError}</p>}
+                <p className="mt-1 text-xs text-brand-brown-dark/70">PNG, JPG, or WebP — up to 2MB.</p>
+                {avatarError && <p className="mt-1 text-xs text-status-danger">{avatarError}</p>}
               </div>
             </div>
           </section>
@@ -162,7 +162,7 @@ export default function ProfilePage() {
                 {nameBusy ? <Loader2 size={16} className="animate-spin" /> : "Save"}
               </MagneticButton>
             </form>
-            {nameMessage && <p className="mt-2 text-sm text-brand-brown-dark/60">{nameMessage}</p>}
+            {nameMessage && <p className="mt-2 text-sm text-brand-brown-dark/70">{nameMessage}</p>}
           </section>
 
           <section className="rounded-3xl border border-brand-brown-dark/10 bg-white p-8">
@@ -195,7 +195,7 @@ export default function ProfilePage() {
                 required
                 className="w-full rounded-full border border-brand-brown-dark/15 px-5 py-3 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
               />
-              {passwordError && <p className="text-sm font-medium text-red-600">{passwordError}</p>}
+              {passwordError && <p className="text-sm font-medium text-status-danger">{passwordError}</p>}
               {passwordDone && (
                 <p className="text-sm font-medium text-brand-blue-deep">Password updated.</p>
               )}
@@ -215,7 +215,7 @@ export default function ProfilePage() {
           <section className="flex items-center justify-between rounded-3xl border border-brand-brown-dark/10 bg-white p-8">
             <div>
               <h2 className="text-lg font-bold text-brand-brown-dark">Log out</h2>
-              <p className="mt-1 text-sm text-brand-brown-dark/60">End your session on this device.</p>
+              <p className="mt-1 text-sm text-brand-brown-dark/70">End your session on this device.</p>
             </div>
             <button
               type="button"
@@ -228,9 +228,9 @@ export default function ProfilePage() {
             </button>
           </section>
 
-          <section className="rounded-3xl border border-red-200 bg-red-50 p-8">
-            <h2 className="text-lg font-bold text-red-700">Delete account</h2>
-            <p className="mt-1 text-sm text-red-700/80">
+          <section className="rounded-3xl border border-status-danger/20 bg-status-danger/5 p-8">
+            <h2 className="text-lg font-bold text-status-danger">Delete account</h2>
+            <p className="mt-1 text-sm text-status-danger/80">
               This permanently deletes your account and everything tied to it. This can&apos;t be undone.
             </p>
 
@@ -239,20 +239,20 @@ export default function ProfilePage() {
                 type="button"
                 data-hover="true"
                 onClick={() => setConfirmingDelete(true)}
-                className="mt-4 flex items-center gap-2 rounded-full border border-red-300 px-5 py-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100"
+                className="mt-4 flex items-center gap-2 rounded-full border border-status-danger/30 px-5 py-3 text-sm font-semibold text-status-danger transition-colors hover:bg-status-danger/10"
               >
                 <Trash2 size={16} />
                 Delete my account
               </button>
             ) : (
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <p className="text-sm font-semibold text-red-700">Are you sure?</p>
+                <p className="text-sm font-semibold text-status-danger">Are you sure?</p>
                 <button
                   type="button"
                   data-hover="true"
                   disabled={deleteBusy}
                   onClick={handleDelete}
-                  className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:bg-red-700 disabled:opacity-60"
+                  className="rounded-full bg-status-danger px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:brightness-90 disabled:opacity-60"
                 >
                   {deleteBusy ? "Deleting…" : "Yes, delete everything"}
                 </button>
@@ -260,7 +260,7 @@ export default function ProfilePage() {
                   type="button"
                   data-hover="true"
                   onClick={() => setConfirmingDelete(false)}
-                  className="text-sm font-semibold text-brand-brown-dark/60 hover:text-brand-brown-dark"
+                  className="text-sm font-semibold text-brand-brown-dark/70 hover:text-brand-brown-dark"
                 >
                   Cancel
                 </button>

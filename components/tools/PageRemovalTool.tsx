@@ -109,7 +109,7 @@ export function PageRemovalTool({
         <div className="space-y-6">
           <FileChip name={file.name} size={file.size} onRemove={reset} />
 
-          <p className="text-sm text-brand-brown-dark/50">
+          <p className="text-sm text-brand-brown-dark/70">
             {selected.size} of {pageCount} pages selected
           </p>
 
@@ -120,7 +120,7 @@ export function PageRemovalTool({
             onToggle={toggle}
           />
 
-          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+          {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
 
           <MagneticButton onClick={handleRemove} disabled={busy}>
             {busy ? (

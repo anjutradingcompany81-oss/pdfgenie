@@ -81,7 +81,7 @@ export function TemplateLibrary({
           <FileText size={16} className="text-brand-blue-deep" />
           Email templates
         </span>
-        <span className="text-xs font-normal text-brand-brown-dark/50">{open ? "Hide" : "Show"}</span>
+        <span className="text-xs font-normal text-brand-brown-dark/70">{open ? "Hide" : "Show"}</span>
       </button>
 
       {open && (
@@ -108,7 +108,7 @@ export function TemplateLibrary({
                   type="button"
                   title="Duplicate"
                   onClick={() => handleDuplicate(t.id)}
-                  className="text-brand-brown-dark/40 hover:text-brand-blue-deep"
+                  className="text-brand-brown-dark/70 hover:text-brand-blue-deep"
                 >
                   <Copy size={14} />
                 </button>
@@ -117,7 +117,7 @@ export function TemplateLibrary({
                     type="button"
                     title="Delete"
                     onClick={() => handleDelete(t.id)}
-                    className="text-brand-brown-dark/40 hover:text-red-600"
+                    className="text-brand-brown-dark/70 hover:text-status-danger"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -142,7 +142,7 @@ export function TemplateLibrary({
               Save
             </button>
           </div>
-          {message && <p className="text-xs text-brand-brown-dark/60">{message}</p>}
+          {message && <p className="text-xs text-brand-brown-dark/70">{message}</p>}
         </div>
       )}
     </div>

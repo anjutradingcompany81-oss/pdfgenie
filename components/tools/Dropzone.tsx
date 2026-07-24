@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { UploadCloud } from "lucide-react";
 import { useRef, useState, type DragEvent, type ChangeEvent } from "react";
@@ -63,7 +63,7 @@ export function Dropzone({
       </div>
       <div>
         <p className="text-lg font-semibold text-brand-brown-dark">{label}</p>
-        {hint && <p className="mt-1 text-sm text-brand-brown-dark/50">{hint}</p>}
+        {hint && <p className="mt-1 text-sm text-brand-brown-dark/70">{hint}</p>}
       </div>
       <input
         ref={inputRef}

@@ -94,7 +94,7 @@ export function SearchTools({
             : "border-brand-brown-dark/15 bg-white focus-within:border-brand-blue"
         }`}
       >
-        <Search size={isLg ? 20 : 15} className={`shrink-0 ${isDark ? "text-white/50" : "text-brand-brown-dark/40"}`} />
+        <Search size={isLg ? 20 : 15} className={`shrink-0 ${isDark ? "text-white/50" : "text-brand-brown-dark/70"}`} />
         <input
           ref={inputRef}
           type="text"
@@ -117,7 +117,7 @@ export function SearchTools({
           className={`w-full min-w-0 bg-transparent focus:outline-none ${
             isLg ? "text-base sm:text-lg" : "text-sm lg:w-24 xl:w-40"
           } ${
-            isDark ? "text-white placeholder:text-white/40" : "text-brand-brown-dark placeholder:text-brand-brown-dark/40"
+            isDark ? "text-white placeholder:text-white/40" : "text-brand-brown-dark placeholder:text-brand-brown-dark/70"
           }`}
         />
         {query && (
@@ -129,7 +129,7 @@ export function SearchTools({
               inputRef.current?.focus();
             }}
           >
-            <X size={isLg ? 18 : 13} className={isDark ? "text-white/50 hover:text-white" : "text-brand-brown-dark/40 hover:text-brand-brown-dark"} />
+            <X size={isLg ? 18 : 13} className={isDark ? "text-white/50 hover:text-white" : "text-brand-brown-dark/70 hover:text-brand-brown-dark"} />
           </button>
         )}
       </div>
@@ -143,7 +143,7 @@ export function SearchTools({
           }`}
         >
           {results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-brand-brown-dark/50">No tools found for &quot;{query}&quot;.</p>
+            <p className="px-4 py-3 text-sm text-brand-brown-dark/70">No tools found for &quot;{query}&quot;.</p>
           ) : (
             results.map((t, i) => (
               <Link

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRef, useState, type PointerEvent } from "react";
 import { Caveat } from "next/font/google";
@@ -97,7 +97,7 @@ export function SignaturePad({ onCreate }: SignaturePadProps) {
           data-hover="true"
           onClick={() => setTab("draw")}
           className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-            tab === "draw" ? "bg-brand-blue-deep text-white" : "text-brand-brown-dark/60"
+            tab === "draw" ? "bg-brand-blue-deep text-white" : "text-brand-brown-dark/70"
           }`}
         >
           Draw
@@ -107,7 +107,7 @@ export function SignaturePad({ onCreate }: SignaturePadProps) {
           data-hover="true"
           onClick={() => setTab("type")}
           className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-            tab === "type" ? "bg-brand-blue-deep text-white" : "text-brand-brown-dark/60"
+            tab === "type" ? "bg-brand-blue-deep text-white" : "text-brand-brown-dark/70"
           }`}
         >
           Type
@@ -131,7 +131,7 @@ export function SignaturePad({ onCreate }: SignaturePadProps) {
               type="button"
               data-hover="true"
               onClick={clearCanvas}
-              className="text-sm font-semibold text-brand-brown-dark/60 hover:text-brand-brown-dark"
+              className="text-sm font-semibold text-brand-brown-dark/70 hover:text-brand-brown-dark"
             >
               Clear
             </button>
@@ -151,7 +151,7 @@ export function SignaturePad({ onCreate }: SignaturePadProps) {
             value={typedName}
             onChange={(e) => setTypedName(e.target.value)}
             placeholder="Type your name"
-            className="w-full rounded-xl border border-brand-brown-dark/15 bg-brand-cream px-4 py-3 text-2xl text-brand-brown-dark placeholder:text-base placeholder:font-sans placeholder:text-brand-brown-dark/35 focus:border-brand-blue focus:outline-none"
+            className="w-full rounded-xl border border-brand-brown-dark/15 bg-brand-cream px-4 py-3 text-2xl text-brand-brown-dark placeholder:text-base placeholder:font-sans placeholder:text-brand-brown-dark/70 focus:border-brand-blue focus:outline-none"
             style={{ fontFamily: caveat.style.fontFamily }}
           />
           <button

@@ -47,7 +47,7 @@ export async function retryFailedRecipients(
   for (const recipient of job.recipients) {
     const fields = (recipient.fields as Record<string, string> | null) ?? {};
     const subject = renderTemplate(job.subject, fields);
-    const html = renderTemplate(job.bodyTemplate, fields);
+    const html = renderTemplate(job.bodyTemplate, fields, { escapeHtml: true });
     const cc = findField(fields, "cc") || undefined;
     const bcc = findField(fields, "bcc") || undefined;
 

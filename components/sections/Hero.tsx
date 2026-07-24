@@ -34,7 +34,14 @@ export function Hero() {
           PDF tooling, reimagined
         </motion.p>
 
-        <motion.div variants={fadeUp} className="max-w-xl">
+        <motion.h1
+          variants={fadeUp}
+          className="max-w-2xl text-4xl font-bold tracking-tight text-brand-brown-dark sm:text-5xl"
+        >
+          Every PDF task, one calm tool
+        </motion.h1>
+
+        <motion.div variants={fadeUp} className="mt-6 max-w-xl">
           <SearchTools variant="light" size="lg" className="w-full" />
         </motion.div>
 
