@@ -32,7 +32,7 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/split"),
       tool("/tools/compress"),
       tool("/tools/rotate-pdf"),
-      tool("/tools/add-watermark"),
+      tool("/tools/watermark"),
       tool("/tools/resize-pdf"),
       tool("/tools/add-text"),
       tool("/tools/sign"),
@@ -43,7 +43,6 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/fill-pdf"),
       tool("/tools/organize-pdf"),
       tool("/tools/crop-pdf"),
-      tool("/tools/remove-watermark"),
     ],
   },
   {
@@ -64,7 +63,7 @@ export const toolCategories: ToolCategory[] = [
   },
   {
     category: "Security",
-    tools: [tool("/tools/add-password"), tool("/tools/remove-password"), tool("/tools/encrypt")],
+    tools: [tool("/tools/password-protect")],
   },
   {
     category: "More Tools",
