@@ -181,6 +181,12 @@ export const CONVERT_TOOLS: Tool[] = [
     title: "Image & Text",
     copy: "Pull the text out of an image, or turn text into a shareable image.",
   },
+  {
+    href: "/tools/convert-image-format",
+    icon: ArrowRightLeft,
+    title: "Convert Image Format",
+    copy: "Convert between JPG and PNG — batch as many as you like.",
+  },
 ];
 
 export const AUTOMATE_TOOLS: Tool[] = [
@@ -216,12 +222,6 @@ export const MORE_TOOLS: Tool[] = [
     icon: QrCode,
     title: "QR code generator",
     copy: "Turn any text or link into a downloadable QR code.",
-  },
-  {
-    href: "/tools/convert-image-format",
-    icon: ArrowRightLeft,
-    title: "Convert Image Format",
-    copy: "Convert between JPG and PNG — batch as many as you like.",
   },
   {
     href: "/tools/resize-jpg",

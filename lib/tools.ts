@@ -55,6 +55,7 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/convert-excel"),
       tool("/tools/ocr-pdf"),
       tool("/tools/image-text"),
+      tool("/tools/convert-image-format"),
     ],
   },
   {
@@ -72,7 +73,6 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/compress-images"),
       tool("/tools/enhance-images"),
       tool("/tools/qr-code-generator"),
-      tool("/tools/convert-image-format"),
       tool("/tools/resize-jpg"),
       tool("/tools/compress-video"),
       tool("/tools/translate"),
