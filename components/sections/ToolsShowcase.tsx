@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Reveal } from "@/components/ui/Reveal";
 import { ToolSection } from "@/components/tools/ToolSection";
-import { AUTOMATE_TOOLS, CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS } from "@/lib/tools-catalog";
+import { AUTOMATE_TOOLS, CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
 
 export function ToolsShowcase() {
   return (
@@ -38,6 +38,12 @@ export function ToolsShowcase() {
           title="Move between formats"
           tools={CONVERT_TOOLS}
           accent="from-emerald-500 to-teal-500"
+        />
+        <ToolSection
+          eyebrow="More tools"
+          title="Images, QR codes, and more"
+          tools={MORE_TOOLS}
+          accent="from-sky-500 to-indigo-500"
         />
 
         <Reveal className="mt-10 flex justify-center">

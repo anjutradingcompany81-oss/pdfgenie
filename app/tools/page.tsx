@@ -1,6 +1,6 @@
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
 import { ToolSection } from "@/components/tools/ToolSection";
-import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, AUTOMATE_TOOLS } from "@/lib/tools-catalog";
+import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, AUTOMATE_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
 
 export default function ToolsPage() {
   return (
@@ -40,6 +40,12 @@ export default function ToolsPage() {
           title="Move between formats"
           tools={CONVERT_TOOLS}
           accent="from-emerald-500 to-teal-500"
+        />
+        <ToolSection
+          eyebrow="More tools"
+          title="Images, QR codes, and more"
+          tools={MORE_TOOLS}
+          accent="from-sky-500 to-indigo-500"
         />
 
         <PrivacyNote />

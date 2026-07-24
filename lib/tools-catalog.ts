@@ -26,6 +26,16 @@ import {
   FileSpreadsheet,
   Table,
   ScanText,
+  FileEdit,
+  FormInput,
+  LayoutGrid,
+  Crop,
+  Eraser,
+  ScanLine,
+  GalleryHorizontal,
+  Minimize2,
+  Sparkles,
+  QrCode,
 } from "lucide-react";
 import type { Tool } from "@/components/tools/ToolCard";
 
@@ -65,6 +75,12 @@ export const CORE_TOOLS: Tool[] = [
     icon: ShieldCheck,
     title: "Encrypt",
     copy: "Lock a PDF behind a password.",
+  },
+  {
+    href: "/tools/edit-pdf",
+    icon: FileEdit,
+    title: "Edit PDF",
+    copy: "Drop text anywhere on the page — add as many notes as you need.",
   },
 ];
 
@@ -122,6 +138,30 @@ export const ORGANIZE_TOOLS: Tool[] = [
     icon: RotateCw,
     title: "Rotate PDF",
     copy: "Turn every page 90°, 180°, or 270°.",
+  },
+  {
+    href: "/tools/fill-pdf",
+    icon: FormInput,
+    title: "Fill PDF",
+    copy: "Detects fillable form fields and lets you fill them right in the browser.",
+  },
+  {
+    href: "/tools/organize-pdf",
+    icon: LayoutGrid,
+    title: "Organize PDF",
+    copy: "Drag to reorder pages, rotate or delete any of them, then save.",
+  },
+  {
+    href: "/tools/crop-pdf",
+    icon: Crop,
+    title: "Crop PDF",
+    copy: "Drag a selection to the area you want to keep, applied to every page.",
+  },
+  {
+    href: "/tools/remove-watermark",
+    icon: Eraser,
+    title: "Remove watermark",
+    copy: "Cover a repeated watermark with white, on every page.",
   },
 ];
 
@@ -192,6 +232,12 @@ export const CONVERT_TOOLS: Tool[] = [
     title: "OCR PDF",
     copy: "Turn a scanned PDF into a searchable one with selectable text.",
   },
+  {
+    href: "/tools/image-to-text",
+    icon: ScanLine,
+    title: "Image to text",
+    copy: "Pull the text out of a photo, screenshot, or scan.",
+  },
 ];
 
 export const AUTOMATE_TOOLS: Tool[] = [
@@ -200,5 +246,32 @@ export const AUTOMATE_TOOLS: Tool[] = [
     icon: Mail,
     title: "Mail Merge",
     copy: "Send personalized emails to a list from Excel, with PDF attachments. Free plan: 30 emails/job.",
+  },
+];
+
+export const MORE_TOOLS: Tool[] = [
+  {
+    href: "/tools/merge-images",
+    icon: GalleryHorizontal,
+    title: "Merge images",
+    copy: "Combine several images into one — stacked or side-by-side.",
+  },
+  {
+    href: "/tools/compress-images",
+    icon: Minimize2,
+    title: "Compress images",
+    copy: "Shrink JPG, PNG, or WebP images — batch as many as you like.",
+  },
+  {
+    href: "/tools/enhance-images",
+    icon: Sparkles,
+    title: "Enhance images",
+    copy: "Adjust brightness, contrast, saturation, and sharpen.",
+  },
+  {
+    href: "/tools/qr-code-generator",
+    icon: QrCode,
+    title: "QR code generator",
+    copy: "Turn any text or link into a downloadable QR code.",
   },
 ];

@@ -74,7 +74,7 @@ export function ToolsMegaMenu({ activeHref }: { activeHref?: string | null }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-1/2 top-full z-50 mt-3 grid w-[min(92vw,880px)] -translate-x-1/2 grid-cols-2 gap-x-8 gap-y-6 rounded-2xl border border-brand-brown-dark/10 bg-white p-6 shadow-lg sm:grid-cols-4"
+            className="absolute left-1/2 top-full z-50 mt-3 grid w-[min(92vw,980px)] -translate-x-1/2 grid-cols-2 gap-x-8 gap-y-6 rounded-2xl border border-brand-brown-dark/10 bg-white p-6 shadow-lg sm:grid-cols-5"
           >
             {toolCategories.map((category) => (
               <div key={category.category}>

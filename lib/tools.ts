@@ -1,12 +1,18 @@
 import type { Tool } from "@/components/tools/ToolCard";
-import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, AUTOMATE_TOOLS } from "@/lib/tools-catalog";
+import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, AUTOMATE_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
 
 export type ToolCategory = {
   category: string;
   tools: Tool[];
 };
 
-const ALL_CATALOG_TOOLS = [...CORE_TOOLS, ...ORGANIZE_TOOLS, ...CONVERT_TOOLS, ...AUTOMATE_TOOLS];
+const ALL_CATALOG_TOOLS = [
+  ...CORE_TOOLS,
+  ...ORGANIZE_TOOLS,
+  ...CONVERT_TOOLS,
+  ...AUTOMATE_TOOLS,
+  ...MORE_TOOLS,
+];
 
 /** Looks up a tool by href from the catalog, so nav/search reuse the same icon+copy defined once in lib/tools-catalog.ts rather than duplicating it. */
 function tool(href: string): Tool {
@@ -33,6 +39,11 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/insert-pages"),
       tool("/tools/remove-pages"),
       tool("/tools/delete-pages"),
+      tool("/tools/edit-pdf"),
+      tool("/tools/fill-pdf"),
+      tool("/tools/organize-pdf"),
+      tool("/tools/crop-pdf"),
+      tool("/tools/remove-watermark"),
     ],
   },
   {
@@ -50,6 +61,7 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/pdf-to-excel"),
       tool("/tools/excel-to-pdf"),
       tool("/tools/ocr-pdf"),
+      tool("/tools/image-to-text"),
     ],
   },
   {
@@ -59,6 +71,15 @@ export const toolCategories: ToolCategory[] = [
   {
     category: "Security",
     tools: [tool("/tools/add-password"), tool("/tools/remove-password"), tool("/tools/encrypt")],
+  },
+  {
+    category: "More Tools",
+    tools: [
+      tool("/tools/merge-images"),
+      tool("/tools/compress-images"),
+      tool("/tools/enhance-images"),
+      tool("/tools/qr-code-generator"),
+    ],
   },
 ];
 
