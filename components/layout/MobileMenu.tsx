@@ -86,6 +86,7 @@ export function MobileMenu({
         transition={{ delay: 0.2, duration: 0.4 }}
         className="mt-6 flex-1"
       >
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-white/50">Tools</p>
         <MobileToolCategories categories={toolCategories} activeHref={pathname} onNavigate={onClose} />
       </motion.div>
 

@@ -26,7 +26,7 @@ export function Avatar({
   return (
     <span
       style={{ width: dimension, height: dimension }}
-      className={`flex items-center justify-center rounded-full bg-brand-blue/15 text-brand-blue-light ${className}`}
+      className={`flex items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue-deep ${className}`}
     >
       <UserIcon size={iconSize} />
     </span>

@@ -49,7 +49,7 @@ function LoginForm() {
   return (
     <div className="flex min-h-[100svh] items-center justify-center px-6 py-32">
       <div className="w-full max-w-sm">
-        <div className="rounded-3xl border border-white/8 bg-brand-surface p-8">
+        <div className="rounded-3xl border border-brand-brown-dark/10 bg-brand-surface p-8">
           <h1 className="text-2xl font-bold text-brand-brown-dark">Welcome back</h1>
           <p className="mt-2 text-sm text-brand-brown-dark/65">
             Log in to access your dashboard.

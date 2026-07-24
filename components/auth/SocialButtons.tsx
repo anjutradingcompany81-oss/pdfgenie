@@ -49,7 +49,7 @@ export function SocialButtons({ callbackUrl }: { callbackUrl?: string }) {
           type="button"
           data-hover="true"
           onClick={() => signIn(id, { callbackUrl: callbackUrl || "/dashboard" })}
-          className="flex w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-brand-brown-dark transition-colors hover:border-brand-blue/40 hover:bg-white/10"
+          className="flex w-full items-center justify-center gap-3 rounded-full border border-brand-brown-dark/15 bg-white px-5 py-3 text-sm font-semibold text-brand-brown-dark transition-colors hover:border-brand-blue/40 hover:bg-brand-cream"
         >
           <Icon />
           {label}

@@ -1,34 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  /* Base surfaces — dark & cinematic rebrand */
-  --background: #0b0c14;
-  --foreground: #f2ede4;
+  /* Base surfaces — light theme */
+  --background: #fafaf8;
+  --foreground: #17130f;
 
-  /* Blue lineage -> cool "magic" accent */
-  --color-brand-blue: #4f7cff;
-  --color-brand-blue-deep: #1a2a6c;
-  --color-brand-blue-light: #8fb3ff;
+  /* Blue lineage -> "magic" accent */
+  --color-brand-blue: #2563eb;
+  --color-brand-blue-deep: #1e3a8a;
+  --color-brand-blue-light: #60a5fa;
 
-  /* Brown lineage -> warm "genie lamp" gold accent.
-     NOTE: --color-brand-brown-dark is the de-facto body/heading text token
-     across the app (text-brand-brown-dark + its /50-/85 opacity variants).
-     On the old light theme it was near-black; here it MUST stay near-white
-     or all body text goes invisible. The name is now a misnomer — this is
-     intentional, not a bug — don't "fix" it back to a dark value. */
-  --color-brand-brown: #d4a24c;
-  --color-brand-brown-dark: #f2ede4;
-  --color-brand-cream: #12131f;
+  /* Brown lineage -> warm "genie lamp" accent.
+     --color-brand-brown-dark is the de-facto body/heading text token across
+     the app (text-brand-brown-dark + its /50-/85 opacity variants) — keep it
+     a dark, near-black warm brown for legible text on the light background. */
+  --color-brand-brown: #6b4423;
+  --color-brand-brown-dark: #4a3728;
+  --color-brand-cream: #fafaf8;
 
-  /* New: card/panel surface, distinct from --background, for depth on dark */
-  --color-brand-surface: #151831;
-  /* New: bright gold for hero glow / highest-emphasis CTAs */
-  --color-brand-gold-glow: #f2c879;
+  /* Card/panel surface, distinct enough from --background for subtle depth */
+  --color-brand-surface: #ffffff;
+  /* Bold gold for hero glow / highest-emphasis CTAs */
+  --color-brand-gold-glow: #c9862e;
 
-  /* Dark-safe status colors (replace raw red-600/green-500/amber-400) */
-  --color-status-success: #34d399;
-  --color-status-danger: #f87171;
-  --color-status-warning: #fbbf24;
+  /* Status colors, tuned for contrast on a light surface */
+  --color-status-success: #059669;
+  --color-status-danger: #dc2626;
+  --color-status-warning: #d97706;
 }
 
 @theme inline {

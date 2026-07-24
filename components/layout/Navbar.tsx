@@ -3,14 +3,13 @@
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { UserMenu } from "@/components/layout/UserMenu";
-import { ToolDropdown } from "@/components/tools/ToolDropdown";
+import { ToolsMegaMenu } from "@/components/tools/ToolsMegaMenu";
 import { SearchTools } from "@/components/tools/SearchTools";
-import { toolCategories } from "@/lib/tools";
 
 const MARKETING_LINKS = [
   { href: "/#features", label: "Features" },
@@ -21,33 +20,13 @@ const MARKETING_LINKS = [
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [openCategory, setOpenCategory] = useState<string | null>(null);
   const { scrollY } = useScroll();
   const { data: session, status } = useSession();
-  const dropdownAreaRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const activeCategory = toolCategories.find((c) => c.tools.some((t) => t.href === pathname))?.category ?? null;
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setScrolled(latest > 24);
   });
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dropdownAreaRef.current && !dropdownAreaRef.current.contains(e.target as Node)) {
-        setOpenCategory(null);
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpenCategory(null);
-    }
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, []);
 
   const isAuthed = status === "authenticated";
   const isLoading = status === "loading";
@@ -71,7 +50,7 @@ export function Navbar() {
             PDF<span className="text-brand-blue">Genie</span>
           </a>
 
-          <div ref={dropdownAreaRef} className="hidden min-w-0 flex-1 items-center justify-start gap-4 pl-8 xl:gap-6 xl:pl-10 lg:flex">
+          <div className="hidden min-w-0 flex-1 items-center justify-start gap-4 pl-8 xl:gap-6 xl:pl-10 lg:flex">
             {MARKETING_LINKS.map((link) => (
               <a
                 key={link.href}
@@ -95,19 +74,7 @@ export function Navbar() {
               </Link>
             )}
 
-            {toolCategories.map((category) => (
-              <ToolDropdown
-                key={category.category}
-                category={category}
-                isOpen={openCategory === category.category}
-                isActive={category.category === activeCategory}
-                activeHref={pathname}
-                onToggle={() =>
-                  setOpenCategory((c) => (c === category.category ? null : category.category))
-                }
-                onClose={() => setOpenCategory(null)}
-              />
-            ))}
+            <ToolsMegaMenu activeHref={pathname} />
 
             <SearchTools />
           </div>
