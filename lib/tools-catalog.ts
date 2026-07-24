@@ -40,6 +40,7 @@ import {
   ArrowRightLeft,
   Maximize2,
   Shrink,
+  FileVideo,
 } from "lucide-react";
 import type { Tool } from "@/components/tools/ToolCard";
 
@@ -301,5 +302,11 @@ export const MORE_TOOLS: Tool[] = [
     icon: Shrink,
     title: "Compress JPG",
     copy: "Shrink JPG file size — batch as many as you like.",
+  },
+  {
+    href: "/tools/compress-video",
+    icon: FileVideo,
+    title: "Compress video",
+    copy: "Shrink a video's file size while keeping it watchable.",
   },
 ];

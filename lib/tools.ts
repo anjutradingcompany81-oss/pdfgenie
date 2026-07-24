@@ -83,6 +83,7 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/jpg-to-png"),
       tool("/tools/resize-jpg"),
       tool("/tools/compress-jpg"),
+      tool("/tools/compress-video"),
     ],
   },
 ];
