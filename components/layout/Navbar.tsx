@@ -68,7 +68,7 @@ export function Navbar() {
             PDF<span className="text-brand-blue">Genie</span>
           </a>
 
-          <div ref={dropdownAreaRef} className="hidden flex-1 items-center justify-center gap-7 lg:flex">
+          <div ref={dropdownAreaRef} className="hidden flex-1 items-center justify-start gap-6 pl-10 lg:flex">
             {MARKETING_LINKS.map((link) => (
               <a
                 key={link.href}
