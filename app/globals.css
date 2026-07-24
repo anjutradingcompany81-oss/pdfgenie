@@ -1,15 +1,34 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafaf8;
-  --foreground: #17130f;
+  /* Base surfaces — dark & cinematic rebrand */
+  --background: #0b0c14;
+  --foreground: #f2ede4;
 
-  --color-brand-blue: #2563eb;
-  --color-brand-blue-deep: #1e3a8a;
-  --color-brand-blue-light: #60a5fa;
-  --color-brand-brown: #6b4423;
-  --color-brand-brown-dark: #4a3728;
-  --color-brand-cream: #fafaf8;
+  /* Blue lineage -> cool "magic" accent */
+  --color-brand-blue: #4f7cff;
+  --color-brand-blue-deep: #1a2a6c;
+  --color-brand-blue-light: #8fb3ff;
+
+  /* Brown lineage -> warm "genie lamp" gold accent.
+     NOTE: --color-brand-brown-dark is the de-facto body/heading text token
+     across the app (text-brand-brown-dark + its /50-/85 opacity variants).
+     On the old light theme it was near-black; here it MUST stay near-white
+     or all body text goes invisible. The name is now a misnomer — this is
+     intentional, not a bug — don't "fix" it back to a dark value. */
+  --color-brand-brown: #d4a24c;
+  --color-brand-brown-dark: #f2ede4;
+  --color-brand-cream: #12131f;
+
+  /* New: card/panel surface, distinct from --background, for depth on dark */
+  --color-brand-surface: #151831;
+  /* New: bright gold for hero glow / highest-emphasis CTAs */
+  --color-brand-gold-glow: #f2c879;
+
+  /* Dark-safe status colors (replace raw red-600/green-500/amber-400) */
+  --color-status-success: #34d399;
+  --color-status-danger: #f87171;
+  --color-status-warning: #fbbf24;
 }
 
 @theme inline {
@@ -21,6 +40,11 @@
   --color-brand-brown: var(--color-brand-brown);
   --color-brand-brown-dark: var(--color-brand-brown-dark);
   --color-brand-cream: var(--color-brand-cream);
+  --color-brand-surface: var(--color-brand-surface);
+  --color-brand-gold-glow: var(--color-brand-gold-glow);
+  --color-status-success: var(--color-status-success);
+  --color-status-danger: var(--color-status-danger);
+  --color-status-warning: var(--color-status-warning);
   --font-poppins: var(--font-poppins);
   --animate-marquee: marquee 30s linear infinite;
   --animate-marquee-fast: marquee 16s linear infinite;

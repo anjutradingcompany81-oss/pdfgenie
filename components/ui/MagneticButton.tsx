@@ -47,12 +47,12 @@ export function MagneticButton({
   }
 
   const base =
-    "relative inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-semibold tracking-wide transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-blue";
+    "relative inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-semibold tracking-wide transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-blue-light";
   const solid =
-    "bg-brand-blue-deep text-white hover:bg-brand-blue";
+    "bg-gradient-to-r from-brand-blue-deep to-brand-blue text-white shadow-[0_0_0_0_rgba(143,179,255,0)] hover:brightness-110 hover:shadow-[0_0_30px_-6px_var(--color-brand-blue-light)]";
   const outline =
-    "border-2 border-brand-brown-dark text-brand-brown-dark hover:bg-brand-brown-dark hover:text-white";
-  const inverted = "bg-white text-brand-blue-deep hover:bg-brand-cream";
+    "border-2 border-brand-brown/60 text-foreground hover:border-brand-brown hover:bg-brand-brown/10";
+  const inverted = "bg-brand-gold-glow text-[#12131f] hover:brightness-105";
 
   const variantClass =
     variant === "solid" ? solid : variant === "outline" ? outline : inverted;
