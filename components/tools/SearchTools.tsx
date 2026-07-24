@@ -35,7 +35,9 @@ export function SearchTools({
   const results = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
     if (!q) return [];
-    return allTools.filter((t) => t.title.toLowerCase().includes(q)).slice(0, 8);
+    return allTools
+      .filter((t) => t.title.toLowerCase().includes(q) || t.copy.toLowerCase().includes(q))
+      .slice(0, 8);
   }, [debouncedQuery]);
   // Clamped rather than reset via an effect keyed on `results` — avoids a
   // cascading render, and self-corrects the moment the list changes.

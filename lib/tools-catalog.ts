@@ -13,9 +13,6 @@ import {
   Stamp,
   Scaling,
   Type,
-  ImagePlus,
-  FileImage,
-  ImageDown,
   FileText,
   FileType,
   Images,
@@ -36,10 +33,8 @@ import {
   Minimize2,
   Sparkles,
   QrCode,
-  ImageUp,
   ArrowRightLeft,
   Maximize2,
-  Shrink,
   FileVideo,
   Languages,
   AudioLines,
@@ -70,7 +65,7 @@ export const CORE_TOOLS: Tool[] = [
     href: "/tools/convert",
     icon: RefreshCw,
     title: "Convert",
-    copy: "Turn PDF pages into images, or images into a PDF.",
+    copy: "Turn PDF pages into JPG or PNG images, or turn JPG/PNG images into a PDF.",
   },
   {
     href: "/tools/sign",
@@ -175,24 +170,6 @@ export const ORGANIZE_TOOLS: Tool[] = [
 
 export const CONVERT_TOOLS: Tool[] = [
   {
-    href: "/tools/image-to-pdf",
-    icon: ImagePlus,
-    title: "Image to PDF",
-    copy: "Combine one or more images into a single PDF.",
-  },
-  {
-    href: "/tools/pdf-to-jpg",
-    icon: FileImage,
-    title: "PDF to JPG",
-    copy: "Turn every page of a PDF into a JPG image.",
-  },
-  {
-    href: "/tools/pdf-to-png",
-    icon: ImageDown,
-    title: "PDF to PNG",
-    copy: "Turn every page of a PDF into a PNG image.",
-  },
-  {
     href: "/tools/pdf-to-text",
     icon: FileText,
     title: "PDF to text",
@@ -246,12 +223,6 @@ export const CONVERT_TOOLS: Tool[] = [
     title: "Image to text",
     copy: "Pull the text out of a photo, screenshot, or scan.",
   },
-  {
-    href: "/tools/jpg-to-pdf",
-    icon: ImageUp,
-    title: "JPG to PDF",
-    copy: "Combine one or more JPG photos into a single PDF.",
-  },
 ];
 
 export const AUTOMATE_TOOLS: Tool[] = [
@@ -299,12 +270,6 @@ export const MORE_TOOLS: Tool[] = [
     icon: Maximize2,
     title: "Resize JPG",
     copy: "Set new dimensions and download a resized copy.",
-  },
-  {
-    href: "/tools/compress-jpg",
-    icon: Shrink,
-    title: "Compress JPG",
-    copy: "Shrink JPG file size — batch as many as you like.",
   },
   {
     href: "/tools/compress-video",

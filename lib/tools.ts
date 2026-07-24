@@ -50,9 +50,6 @@ export const toolCategories: ToolCategory[] = [
     category: "Convert Tools",
     tools: [
       tool("/tools/convert"),
-      tool("/tools/image-to-pdf"),
-      tool("/tools/pdf-to-jpg"),
-      tool("/tools/pdf-to-png"),
       tool("/tools/pdf-to-text"),
       tool("/tools/text-to-pdf"),
       tool("/tools/extract-images"),
@@ -62,7 +59,6 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/excel-to-pdf"),
       tool("/tools/ocr-pdf"),
       tool("/tools/image-to-text"),
-      tool("/tools/jpg-to-pdf"),
     ],
   },
   {
@@ -82,7 +78,6 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/qr-code-generator"),
       tool("/tools/jpg-to-png"),
       tool("/tools/resize-jpg"),
-      tool("/tools/compress-jpg"),
       tool("/tools/compress-video"),
       tool("/tools/translate"),
       tool("/tools/audio-to-text"),
