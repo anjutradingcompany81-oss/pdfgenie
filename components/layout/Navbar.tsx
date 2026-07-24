@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { MobileMenu } from "@/components/layout/MobileMenu";
@@ -24,6 +25,8 @@ export function Navbar() {
   const { scrollY } = useScroll();
   const { data: session, status } = useSession();
   const dropdownAreaRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const activeCategory = toolCategories.find((c) => c.tools.some((t) => t.href === pathname))?.category ?? null;
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setScrolled(latest > 24);
@@ -97,6 +100,8 @@ export function Navbar() {
                 key={category.category}
                 category={category}
                 isOpen={openCategory === category.category}
+                isActive={category.category === activeCategory}
+                activeHref={pathname}
                 onToggle={() =>
                   setOpenCategory((c) => (c === category.category ? null : category.category))
                 }

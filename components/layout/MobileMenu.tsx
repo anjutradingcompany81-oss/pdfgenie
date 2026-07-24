@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import NextLink from "next/link";
+import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { Avatar } from "@/components/ui/Avatar";
@@ -28,6 +29,8 @@ export function MobileMenu({
   userEmail?: string | null;
   userImage?: string | null;
 }) {
+  const pathname = usePathname();
+
   return (
     <motion.div
       className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-brand-blue-deep px-6 py-6 text-white lg:hidden"
@@ -83,7 +86,7 @@ export function MobileMenu({
         transition={{ delay: 0.2, duration: 0.4 }}
         className="mt-6 flex-1"
       >
-        <MobileToolCategories categories={toolCategories} onNavigate={onClose} />
+        <MobileToolCategories categories={toolCategories} activeHref={pathname} onNavigate={onClose} />
       </motion.div>
 
       <motion.div
