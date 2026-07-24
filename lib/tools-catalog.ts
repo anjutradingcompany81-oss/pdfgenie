@@ -41,6 +41,9 @@ import {
   Maximize2,
   Shrink,
   FileVideo,
+  Languages,
+  AudioLines,
+  Captions,
 } from "lucide-react";
 import type { Tool } from "@/components/tools/ToolCard";
 
@@ -308,5 +311,23 @@ export const MORE_TOOLS: Tool[] = [
     icon: FileVideo,
     title: "Compress video",
     copy: "Shrink a video's file size while keeping it watchable.",
+  },
+  {
+    href: "/tools/translate",
+    icon: Languages,
+    title: "Language translator",
+    copy: "Translate text between 12 languages, self-hosted on our server.",
+  },
+  {
+    href: "/tools/audio-to-text",
+    icon: AudioLines,
+    title: "Audio to text",
+    copy: "Transcribe speech from an audio file, self-hosted on our server.",
+  },
+  {
+    href: "/tools/video-to-text",
+    icon: Captions,
+    title: "Video to text",
+    copy: "Transcribe the spoken audio from a video, self-hosted on our server.",
   },
 ];
