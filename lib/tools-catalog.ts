@@ -22,6 +22,10 @@ import {
   FileUp,
   FileDown,
   Mail,
+  RotateCw,
+  FileSpreadsheet,
+  Table,
+  ScanText,
 } from "lucide-react";
 import type { Tool } from "@/components/tools/ToolCard";
 
@@ -113,6 +117,12 @@ export const ORGANIZE_TOOLS: Tool[] = [
     title: "Add text",
     copy: "Type a line of text and click where it should go.",
   },
+  {
+    href: "/tools/rotate-pdf",
+    icon: RotateCw,
+    title: "Rotate PDF",
+    copy: "Turn every page 90°, 180°, or 270°.",
+  },
 ];
 
 export const CONVERT_TOOLS: Tool[] = [
@@ -163,6 +173,24 @@ export const CONVERT_TOOLS: Tool[] = [
     icon: FileDown,
     title: "PDF to Word",
     copy: "Turn a PDF into an editable .docx file.",
+  },
+  {
+    href: "/tools/pdf-to-excel",
+    icon: FileSpreadsheet,
+    title: "PDF to Excel",
+    copy: "Pull a PDF's text into a spreadsheet, one row per line.",
+  },
+  {
+    href: "/tools/excel-to-pdf",
+    icon: Table,
+    title: "Excel to PDF",
+    copy: "Turn a spreadsheet's first sheet into a PDF table.",
+  },
+  {
+    href: "/tools/ocr-pdf",
+    icon: ScanText,
+    title: "OCR PDF",
+    copy: "Turn a scanned PDF into a searchable one with selectable text.",
   },
 ];
 

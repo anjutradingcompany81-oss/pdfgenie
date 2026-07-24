@@ -2,47 +2,52 @@
 
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { ToolDropdown } from "@/components/tools/ToolDropdown";
+import { SearchTools } from "@/components/tools/SearchTools";
+import { toolCategories } from "@/lib/tools";
 
-const BASE_NAV_LINKS = [
+const MARKETING_LINKS = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How it works" },
-  { href: "/tools", label: "Tools", route: true },
   { href: "/#pricing", label: "Pricing" },
-];
-
-const LOGGED_OUT_LINKS = [
-  ...BASE_NAV_LINKS,
-  { href: "/admin/dashboard/login", label: "Admin", route: true },
-];
-
-const LOGGED_IN_LINKS = [
-  { href: "/dashboard", label: "Dashboard", route: true },
-  { href: "/tools", label: "Tools", route: true },
-  { href: "/dashboard/profile", label: "Profile", route: true },
 ];
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
   const { scrollY } = useScroll();
   const { data: session, status } = useSession();
+  const dropdownAreaRef = useRef<HTMLDivElement>(null);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setScrolled(latest > 24);
   });
 
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownAreaRef.current && !dropdownAreaRef.current.contains(e.target as Node)) {
+        setOpenCategory(null);
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenCategory(null);
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, []);
+
   const isAuthed = status === "authenticated";
-  const navLinks = isAuthed ? LOGGED_IN_LINKS : LOGGED_OUT_LINKS;
-  // Mobile has no separate button area, so "Log in" (handled as a standalone
-  // text link on desktop) is folded into the link list here instead.
-  const mobileLinks = isAuthed
-    ? navLinks
-    : [...BASE_NAV_LINKS, { href: "/login", label: "Log in", route: true }, ...LOGGED_OUT_LINKS.slice(BASE_NAV_LINKS.length)];
+  const isLoading = status === "loading";
 
   return (
     <>
@@ -53,47 +58,60 @@ export function Navbar() {
             : "bg-transparent py-6"
         }`}
       >
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 lg:px-10">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 lg:px-10">
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- plain anchor is required so SmoothScroll's own click handler can smooth-scroll same-page, and fall back to a real navigation from other routes */}
           <a
             href="/#top"
             data-hover="true"
-            className="text-lg font-bold tracking-tight text-brand-brown-dark"
+            className="shrink-0 text-lg font-bold tracking-tight text-brand-brown-dark"
           >
             PDF<span className="text-brand-blue">Genie</span>
           </a>
 
-          <ul className="hidden items-center gap-10 md:flex">
-            {navLinks.map((link) =>
-              link.route ? (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    data-hover="true"
-                    className="group relative text-sm font-semibold text-brand-brown-dark"
-                  >
-                    {link.label}
-                    <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
-                  </Link>
-                </li>
-              ) : (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    data-hover="true"
-                    className="group relative text-sm font-semibold text-brand-brown-dark"
-                  >
-                    {link.label}
-                    <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
-                  </a>
-                </li>
-              )
-            )}
-          </ul>
+          <div ref={dropdownAreaRef} className="hidden flex-1 items-center justify-center gap-7 lg:flex">
+            {MARKETING_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                data-hover="true"
+                className="group relative shrink-0 text-sm font-semibold text-brand-brown-dark"
+              >
+                {link.label}
+                <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
+              </a>
+            ))}
 
-          <div className="hidden items-center gap-5 md:flex">
-            {isAuthed ? (
-              <UserMenu name={session?.user?.name} image={session?.user?.image} />
+            {!isAuthed && (
+              <Link
+                href="/admin/dashboard/login"
+                data-hover="true"
+                className="group relative shrink-0 text-sm font-semibold text-brand-brown-dark"
+              >
+                Admin
+                <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
+              </Link>
+            )}
+
+            {toolCategories.map((category) => (
+              <ToolDropdown
+                key={category.category}
+                category={category}
+                isOpen={openCategory === category.category}
+                onToggle={() =>
+                  setOpenCategory((c) => (c === category.category ? null : category.category))
+                }
+                onClose={() => setOpenCategory(null)}
+              />
+            ))}
+
+            <SearchTools />
+          </div>
+
+          <div className="hidden shrink-0 items-center gap-5 lg:flex">
+            {isLoading ? (
+              <div className="h-9 w-24 animate-pulse rounded-full bg-brand-brown-dark/10" aria-label="Checking sign-in status" role="status" />
+            ) : isAuthed ? (
+              <UserMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} />
             ) : (
               <>
                 <Link
@@ -114,7 +132,7 @@ export function Navbar() {
             type="button"
             data-hover="true"
             onClick={() => setMenuOpen(true)}
-            className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 md:hidden"
+            className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 lg:hidden"
             aria-label="Open menu"
             aria-expanded={menuOpen}
           >
@@ -126,7 +144,13 @@ export function Navbar() {
 
       <AnimatePresence>
         {menuOpen && (
-          <MobileMenu onClose={() => setMenuOpen(false)} links={mobileLinks} isAuthed={isAuthed} />
+          <MobileMenu
+            onClose={() => setMenuOpen(false)}
+            isAuthed={isAuthed}
+            userName={session?.user?.name}
+            userEmail={session?.user?.email}
+            userImage={session?.user?.image}
+          />
         )}
       </AnimatePresence>
     </>

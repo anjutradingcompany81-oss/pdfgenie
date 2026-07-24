@@ -51,6 +51,7 @@
     "prisma": "^7.9.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "tesseract.js": "^7.0.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.4.3"
   },
@@ -74,6 +75,7 @@
     "prisma@7.9.0": true,
     "sharp@0.34.5": true,
     "unrs-resolver@1.12.2": true,
-    "esbuild@0.28.1": true
+    "esbuild@0.28.1": true,
+    "tesseract.js@7.0.0": true
   }
 }

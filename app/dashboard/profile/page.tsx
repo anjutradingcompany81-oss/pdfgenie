@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, LogOut, Trash2, User } from "lucide-react";
+import { Loader2, LogOut, Trash2 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { Avatar } from "@/components/ui/Avatar";
 
 export default function ProfilePage() {
   const { data: session, update } = useSession();
@@ -125,18 +126,7 @@ export default function ProfilePage() {
           <section className="rounded-3xl border border-brand-brown-dark/10 bg-white p-8">
             <h2 className="text-lg font-bold text-brand-brown-dark">Profile picture</h2>
             <div className="mt-4 flex items-center gap-5">
-              {session?.user?.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={session.user.image}
-                  alt=""
-                  className="h-16 w-16 rounded-full object-cover"
-                />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue-deep">
-                  <User size={28} />
-                </div>
-              )}
+              <Avatar image={session?.user?.image} size={64} iconSize={28} />
               <div>
                 <button
                   type="button"

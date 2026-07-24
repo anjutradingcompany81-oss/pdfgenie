@@ -4,21 +4,33 @@ import { motion } from "framer-motion";
 import NextLink from "next/link";
 import { signOut } from "next-auth/react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { Avatar } from "@/components/ui/Avatar";
+import { SearchTools } from "@/components/tools/SearchTools";
+import { MobileToolCategories } from "@/components/tools/MobileToolCategories";
+import { toolCategories } from "@/lib/tools";
 
-type Link_ = { href: string; label: string; route?: boolean };
+const MARKETING_LINKS = [
+  { href: "/#features", label: "Features" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#pricing", label: "Pricing" },
+];
 
 export function MobileMenu({
   onClose,
-  links,
   isAuthed = false,
+  userName,
+  userEmail,
+  userImage,
 }: {
   onClose: () => void;
-  links: Link_[];
   isAuthed?: boolean;
+  userName?: string | null;
+  userEmail?: string | null;
+  userImage?: string | null;
 }) {
   return (
     <motion.div
-      className="fixed inset-0 z-[60] flex flex-col bg-brand-blue-deep px-6 py-6 text-white md:hidden"
+      className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-brand-blue-deep px-6 py-6 text-white lg:hidden"
       initial={{ clipPath: "inset(0 0 100% 0)" }}
       animate={{ clipPath: "inset(0 0 0% 0)" }}
       exit={{ clipPath: "inset(0 0 100% 0)" }}
@@ -38,55 +50,85 @@ export function MobileMenu({
         </button>
       </div>
 
-      <nav className="mt-16 flex flex-1 flex-col justify-center gap-8">
-        {links.map((link, i) => (
-          <motion.div
-            key={link.href}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 + i * 0.08, duration: 0.5 }}
-          >
-            {link.route ? (
-              <NextLink
-                href={link.href}
-                onClick={onClose}
-                className="text-4xl font-bold tracking-tight"
-              >
-                {link.label}
-              </NextLink>
-            ) : (
-              <a
-                href={link.href}
-                onClick={onClose}
-                className="text-4xl font-bold tracking-tight"
-              >
-                {link.label}
-              </a>
-            )}
-          </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.4 }}
+        className="mt-8"
+      >
+        <SearchTools variant="dark" className="w-full" onNavigate={onClose} />
+      </motion.div>
+
+      <motion.nav
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15, duration: 0.4 }}
+        className="mt-6 flex flex-wrap gap-x-6 gap-y-2"
+      >
+        {MARKETING_LINKS.map((link) => (
+          <a key={link.href} href={link.href} onClick={onClose} className="text-sm font-semibold text-white/70">
+            {link.label}
+          </a>
         ))}
-      </nav>
+        {!isAuthed && (
+          <NextLink href="/admin/dashboard/login" onClick={onClose} className="text-sm font-semibold text-white/70">
+            Admin
+          </NextLink>
+        )}
+      </motion.nav>
 
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        className="mt-6 flex-1"
+      >
+        <MobileToolCategories categories={toolCategories} onNavigate={onClose} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.4 }}
+        className="mt-8 border-t border-white/15 pt-6"
       >
         {isAuthed ? (
-          <MagneticButton
-            onClick={() => {
-              onClose();
-              signOut({ callbackUrl: "/" });
-            }}
-            variant="inverted"
-            className="w-full justify-center"
-          >
-            Log out
-          </MagneticButton>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Avatar image={userImage} size={40} iconSize={20} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{userName || "Account"}</p>
+                {userEmail && <p className="truncate text-xs text-white/60">{userEmail}</p>}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3 text-sm font-semibold text-white/70">
+              <NextLink href="/dashboard" onClick={onClose}>
+                Dashboard
+              </NextLink>
+              <NextLink href="/dashboard/profile" onClick={onClose}>
+                My Profile
+              </NextLink>
+            </div>
+            <MagneticButton
+              onClick={() => {
+                onClose();
+                signOut({ callbackUrl: "/" });
+              }}
+              variant="inverted"
+              className="w-full justify-center"
+            >
+              Log out
+            </MagneticButton>
+          </div>
         ) : (
-          <MagneticButton href="/signup" onClick={onClose} variant="inverted" className="w-full justify-center">
-            Sign up
-          </MagneticButton>
+          <div className="space-y-3">
+            <NextLink href="/login" onClick={onClose} className="block text-center text-sm font-semibold text-white/85">
+              Log in
+            </NextLink>
+            <MagneticButton href="/signup" onClick={onClose} variant="inverted" className="w-full justify-center">
+              Sign up
+            </MagneticButton>
+          </div>
         )}
       </motion.div>
     </motion.div>
