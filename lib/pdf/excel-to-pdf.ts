@@ -14,7 +14,12 @@ const LINE_HEIGHT = FONT_SIZE * 1.8;
  * cell values are truncated to fit their column rather than wrapped.
  */
 export async function excelToPdf(bytes: ArrayBuffer): Promise<Uint8Array> {
-  const workbook = XLSX.read(bytes, { type: "array" });
+  let workbook: XLSX.WorkBook;
+  try {
+    workbook = XLSX.read(bytes, { type: "array" });
+  } catch {
+    throw new Error("Couldn't read that file — it may not be a valid Excel or CSV file.");
+  }
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) {
     throw new Error("That file doesn't have any sheets.");
