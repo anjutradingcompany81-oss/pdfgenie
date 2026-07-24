@@ -6,34 +6,46 @@ import { ToolShell } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
-import { ComingSoon } from "@/components/tools/ComingSoon";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { downloadBlob, bytesToBlob } from "@/lib/pdf/download";
+
+function friendlyError(err: unknown): string {
+  const message = err instanceof Error ? err.message : "";
+  if (message.includes("Incorrect password")) return "That password doesn't match this PDF.";
+  if (message.includes("not encrypted")) return "This PDF isn't password-protected — nothing to remove.";
+  if (message.includes("Unsupported encryption")) {
+    return "This PDF uses an encryption method we don't support yet (AES-128). Try re-saving it with AES-256 or RC4 protection first.";
+  }
+  return "Couldn't remove the password — the file may be corrupted.";
+}
 
 export default function RemovePasswordPage() {
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   function reset() {
     setFile(null);
     setPassword("");
-    setNotice(null);
+    setError(null);
+    setDone(false);
   }
 
   async function handleRemovePassword() {
     if (!file || !password) return;
     setBusy(true);
-    setNotice(null);
+    setError(null);
+    setDone(false);
     try {
-      // TODO: Decrypting a real user-password-protected PDF needs a proper
-      // PDF decryption implementation (RC4/AES-256 per the PDF spec, driven
-      // by the supplied password) — pdf-lib does not support this, and
-      // @pdfsmaller/pdf-encrypt (already a dependency) only encrypts, it has
-      // no decrypt path. Wire up real decryption here once a suitable
-      // library/implementation is in place.
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      setNotice("Password removal isn't available yet — check back soon.");
+      const { decryptPDF } = await import("@pdfsmaller/pdf-decrypt");
+      const buffer = await file.arrayBuffer();
+      const decrypted = await decryptPDF(new Uint8Array(buffer), password);
+      downloadBlob(bytesToBlob(decrypted, "application/pdf"), "unlocked.pdf");
+      setDone(true);
+    } catch (err) {
+      setError(friendlyError(err));
     } finally {
       setBusy(false);
     }
@@ -71,13 +83,16 @@ export default function RemovePasswordPage() {
             />
           </div>
 
-          {notice && <ComingSoon note={notice} />}
+          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+          {done && !error && (
+            <p className="text-sm font-medium text-brand-blue-deep">Unlocked PDF downloaded.</p>
+          )}
 
           <MagneticButton onClick={handleRemovePassword} disabled={busy || !password}>
             {busy ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                Checking…
+                Unlocking…
               </>
             ) : (
               "Remove password"
