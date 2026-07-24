@@ -47,4 +47,7 @@ def transcribe():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=PORT)
+    # threaded=True so one slow transcription doesn't block other requests —
+    # this is still Flask's dev server (fine for an internal, localhost-only
+    # service with modest concurrent load; not exposed to the internet).
+    app.run(host="127.0.0.1", port=PORT, threaded=True)
