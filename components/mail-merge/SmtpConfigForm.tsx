@@ -60,7 +60,7 @@ export function SmtpConfigForm({
   onChange: (next: SmtpConfigState) => void;
 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [detected, setDetected] = useState<string | null>(null);
+  const [detected, setDetected] = useState<ProviderPreset | null>(null);
   const [unrecognized, setUnrecognized] = useState(false);
 
   function set<K extends keyof SmtpConfigState>(key: K, val: SmtpConfigState[K]) {
@@ -80,7 +80,7 @@ export function SmtpConfigForm({
     const preset = detectProvider(value.fromEmail);
     if (preset) {
       onChange({ ...value, host: preset.host, port: preset.port, secure: preset.secure });
-      setDetected(preset.label);
+      setDetected(preset);
       setUnrecognized(false);
     } else if (value.fromEmail.includes("@")) {
       setDetected(null);
@@ -140,7 +140,7 @@ export function SmtpConfigForm({
 
           {detected && (
             <p className="text-xs font-medium text-status-success">
-              Detected {detected} — server settings filled in automatically.
+              Detected {detected.label} — using {detected.host}:{detected.port}. No need to touch the server details below.
             </p>
           )}
           {unrecognized && (
