@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Mail, Loader2, Sparkles, FileText, Lock, History, Download } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ToolShell } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
@@ -19,11 +19,11 @@ import { AttachmentFolderPicker, attachmentLeafName } from "@/components/mail-me
 import { RecipientValidationReport } from "@/components/mail-merge/RecipientValidationReport";
 import { ConfirmSendDialog } from "@/components/mail-merge/ConfirmSendDialog";
 import { SendProgress } from "@/components/mail-merge/SendProgress";
+import { WizardStepper, type WizardStepId } from "@/components/mail-merge/WizardStepper";
 import { resolveRecipientAttachmentNames, findExtraAndDuplicateFiles } from "@/lib/mail-merge/resolve-attachments";
 import type { RowProblem } from "@/lib/mail-merge/parse-recipients";
 
 type Recipient = { email: string; fields: Record<string, string> };
-type ComposeStep = "recipients" | "attachments" | "composer" | "preview";
 
 const PREMIUM_FEATURES = [
   "Scheduled campaigns",
@@ -35,14 +35,12 @@ const PREMIUM_FEATURES = [
   "Priority support",
 ];
 
-function StepLabel({ n, children }: { n: number; children: string }) {
+function StepHeading({ title, description }: { title: string; description?: string }) {
   return (
-    <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-brown-dark">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue-deep text-[11px] font-bold text-white">
-        {n}
-      </span>
-      {children}
-    </p>
+    <div className="mb-7">
+      <h2 className="text-xl font-bold text-brand-brown-dark">{title}</h2>
+      {description && <p className="mt-2 text-sm leading-relaxed text-brand-brown-dark/65">{description}</p>}
+    </div>
   );
 }
 
@@ -60,13 +58,13 @@ function WizardNav({
   nextDisabled?: boolean;
 }) {
   return (
-    <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-brand-brown-dark/10 pt-5">
+    <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-brand-brown-dark/10 pt-7">
       <div className="flex gap-3">
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="rounded-full border border-brand-brown-dark/15 px-5 py-2.5 text-sm font-semibold text-brand-brown-dark hover:border-brand-blue/40"
+            className="rounded-full border border-brand-brown-dark/15 px-5 py-2.5 text-sm font-semibold text-brand-brown-dark transition-colors hover:border-brand-blue/40 hover:bg-brand-cream"
           >
             Back
           </button>
@@ -74,7 +72,7 @@ function WizardNav({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-full px-5 py-2.5 text-sm font-semibold text-status-danger hover:bg-status-danger/5"
+          className="rounded-full px-5 py-2.5 text-sm font-semibold text-status-danger transition-colors hover:bg-status-danger/5"
         >
           Cancel
         </button>
@@ -86,9 +84,17 @@ function WizardNav({
   );
 }
 
+const PRIVACY_NOTE = (
+  <p className="mt-6 flex items-start gap-2 text-xs text-brand-brown-dark/70">
+    <Mail size={14} className="mt-0.5 shrink-0" />
+    Unlike PDF Genie&apos;s other tools, Mail Merge has to send your recipient list, message, and
+    attachments to our server to deliver the emails — they aren&apos;t processed locally in your browser.
+  </p>
+);
+
 export default function MailMergePage() {
   const [stage, setStage] = useState<"auth" | "compose">("auth");
-  const [composeStep, setComposeStep] = useState<ComposeStep>("recipients");
+  const [composeStep, setComposeStep] = useState<WizardStepId>("recipients");
   const [smtp, setSmtp] = useState<SmtpConfigState>(EMPTY_SMTP_CONFIG);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [recipients, setRecipients] = useState<Recipient[] | null>(null);
@@ -107,6 +113,12 @@ export default function MailMergePage() {
 
   const [usageRefreshKey, setUsageRefreshKey] = useState(0);
   const [upgrade, setUpgrade] = useState<{ open: boolean; message?: string }>({ open: false });
+
+  // Jumping between wizard steps should always land the user at the top of
+  // the new step's content, not wherever they happened to be scrolled to.
+  useEffect(() => {
+    if (stage === "compose") window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [stage, composeStep]);
 
   const hasAttachmentColumn = columns.some((c) => c.trim().toLowerCase() === "attachment");
   const uploadedFilenames = useMemo(() => attachments.map((a) => attachmentLeafName(a)), [attachments]);
@@ -242,46 +254,84 @@ export default function MailMergePage() {
         </Link>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
-        <div className="space-y-8">
-          {stage === "auth" ? (
+      {stage === "auth" ? (
+        <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+          <div className="space-y-8">
             <SendMethodStep
               onContinue={(config) => {
                 setSmtp(config);
                 setStage("compose");
               }}
             />
-          ) : (
-            <>
-              <div>
-                <div className="surface-card flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-brown-dark/10 bg-white p-4 text-sm">
-                  <span className="text-brand-brown-dark">
-                    {smtp.useCustom ? (
-                      <>
-                        Sending as <span className="font-semibold">{smtp.fromEmail}</span>
-                      </>
-                    ) : (
-                      "Sending from PDF Genie's address"
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    data-hover="true"
-                    onClick={() => setStage("auth")}
-                    className="text-xs font-semibold text-brand-blue-deep hover:underline"
-                  >
-                    Change sending method
-                  </button>
-                </div>
-              </div>
+            {PRIVACY_NOTE}
+          </div>
 
+          <div className="space-y-6">
+            <UsageCard refreshKey={usageRefreshKey} />
+
+            <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-brand-blue-deep" />
+                <h3 className="text-sm font-bold uppercase tracking-wide text-brand-brown-dark">Pro</h3>
+              </div>
+              <ul className="mt-3 space-y-2">
+                {PREMIUM_FEATURES.map((feature) => (
+                  <li key={feature} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-brand-brown-dark/70">
+                      <Lock size={12} className="text-brand-brown-dark/70" />
+                      {feature}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                data-hover="true"
+                onClick={() => setUpgrade({ open: true })}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-brand-blue-deep py-2.5 text-xs font-semibold text-white"
+              >
+                <FileText size={14} />
+                Upgrade to Pro
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="surface-card rounded-3xl border border-brand-brown-dark/10 bg-white p-6 sm:p-10">
+            <WizardStepper current={composeStep} />
+
+            <div className="mt-7 flex flex-wrap items-center justify-between gap-2 border-b border-brand-brown-dark/10 pb-7 text-sm">
+              <span className="text-brand-brown-dark/80">
+                {smtp.useCustom ? (
+                  <>
+                    Sending as <span className="font-semibold text-brand-brown-dark">{smtp.fromEmail}</span>
+                  </>
+                ) : (
+                  "Sending from PDF Genie's address"
+                )}
+              </span>
+              <button
+                type="button"
+                data-hover="true"
+                onClick={() => setStage("auth")}
+                className="text-xs font-semibold text-brand-blue-deep hover:underline"
+              >
+                Change sending method
+              </button>
+            </div>
+
+            <div className="mt-8">
               {composeStep === "recipients" && (
-                <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
-                  <StepLabel n={1}>Upload recipient list (Excel or CSV, needs an &quot;Email&quot; column)</StepLabel>
+                <div>
+                  <StepHeading
+                    title="Upload your recipient list"
+                    description='Excel or CSV, with a column named "Email" — that&apos;s the only requirement.'
+                  />
                   <a
                     href="/samples/mail-merge-template.xlsx"
                     download
-                    className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue-deep hover:underline"
+                    className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue-deep hover:underline"
                   >
                     <Download size={14} />
                     Download sample Excel template
@@ -301,7 +351,7 @@ export default function MailMergePage() {
                     </p>
                   )}
                   {excelFile && (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <FileChip name={excelFile.name} size={excelFile.size} onRemove={reset} />
                       {recipients && (
                         <>
@@ -311,34 +361,26 @@ export default function MailMergePage() {
                       )}
                     </div>
                   )}
-                  {error && <p className="mt-3 text-sm font-medium text-status-danger">{error}</p>}
+                  {error && <p className="mt-4 text-sm font-medium text-status-danger">{error}</p>}
 
-                  <WizardNav
-                    onCancel={reset}
-                    onNext={() => setComposeStep("attachments")}
-                    nextLabel="Submit"
-                    nextDisabled={!recipients}
-                  />
+                  <WizardNav onCancel={reset} onNext={() => setComposeStep("attachments")} nextDisabled={!recipients} />
                 </div>
               )}
 
               {composeStep === "attachments" && recipients && (
-                <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
-                  <StepLabel n={2}>Upload PDF files (optional)</StepLabel>
-                  <p className="mb-3 text-xs text-brand-brown-dark/70">
-                    By default, every file you drop here is sent to every recipient. To send a
-                    different file per person instead, add a column named{" "}
-                    <span className="font-mono text-brand-blue-deep">Attachment</span> to your
-                    Excel sheet containing the exact filename to send them (e.g.{" "}
-                    <span className="font-mono">invoice_john.pdf</span>) — then upload all the
-                    files below and Mail Merge will match each recipient to their file.
-                  </p>
+                <div>
+                  <StepHeading
+                    title="Attach PDF files"
+                    description={
+                      'Optional. By default, every file you drop here goes to every recipient. To send a different file per person, add a column named "Attachment" to your Excel sheet with the exact filename to send them (e.g. invoice_john.pdf), then upload all the files below.'
+                    }
+                  />
                   <AttachmentFolderPicker
                     onFiles={(files) => setAttachments((prev) => [...prev, ...files])}
                     hint="Up to 30 attachments on the free plan"
                   />
                   {attachments.length > 0 && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-4 space-y-2">
                       {attachments.map((file, i) => (
                         <FileChip
                           key={`${file.name}-${i}`}
@@ -350,13 +392,13 @@ export default function MailMergePage() {
                     </div>
                   )}
                   {hasAttachmentColumn && (
-                    <p className="mt-3 text-xs text-brand-brown-dark/70">
-                      &quot;Attachment&quot; column detected — attachments will be matched
-                      per recipient instead of sent to everyone.
+                    <p className="mt-4 text-xs text-brand-brown-dark/70">
+                      &quot;Attachment&quot; column detected — attachments will be matched per recipient
+                      instead of sent to everyone.
                     </p>
                   )}
 
-                  <div className="mt-6">
+                  <div className="mt-8">
                     <RecipientValidationReport
                       cleanCount={recipients.length - attachmentIssues.length}
                       problems={problems}
@@ -371,17 +413,19 @@ export default function MailMergePage() {
                     onBack={() => setComposeStep("recipients")}
                     onCancel={reset}
                     onNext={() => setComposeStep("composer")}
-                    nextLabel="Submit"
                     nextDisabled={!validationReady}
                   />
                 </div>
               )}
 
               {composeStep === "composer" && recipients && (
-                <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
-                  <StepLabel n={3}>Email composer</StepLabel>
+                <div>
+                  <StepHeading
+                    title="Compose your email"
+                    description="Write once, personalize for everyone with merge fields from your Excel columns."
+                  />
                   {columns.length > 0 && (
-                    <p className="mb-3 flex flex-wrap gap-1.5 text-xs text-brand-brown-dark/70">
+                    <p className="mb-5 flex flex-wrap gap-1.5 text-xs text-brand-brown-dark/70">
                       Merge fields:{" "}
                       {[...columns, "Current Date"].map((c) => (
                         <button
@@ -395,15 +439,17 @@ export default function MailMergePage() {
                       ))}
                     </p>
                   )}
-                  <input
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Subject — e.g. Promotion Letter - {{Name}}"
-                    className="mb-3 w-full rounded-full border border-brand-brown-dark/15 px-5 py-3 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
-                  />
-                  <RichTextEditor content={body} onChange={setBody} placeholder="Write your message. Use {{FieldName}} to personalize." />
+                  <div className="space-y-4">
+                    <input
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Subject — e.g. Promotion Letter - {{Name}}"
+                      className="w-full rounded-full border border-brand-brown-dark/15 px-5 py-3 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
+                    />
+                    <RichTextEditor content={body} onChange={setBody} placeholder="Write your message. Use {{FieldName}} to personalize." />
+                  </div>
 
-                  <div className="mt-4">
+                  <div className="mt-5">
                     <TemplateLibrary
                       currentSubject={subject}
                       currentBody={body}
@@ -413,7 +459,7 @@ export default function MailMergePage() {
                       }}
                     />
                   </div>
-                  {error && <p className="mt-3 text-sm font-medium text-status-danger">{error}</p>}
+                  {error && <p className="mt-4 text-sm font-medium text-status-danger">{error}</p>}
 
                   <WizardNav
                     onBack={() => setComposeStep("attachments")}
@@ -426,14 +472,16 @@ export default function MailMergePage() {
                       setError(null);
                       setComposeStep("preview");
                     }}
-                    nextLabel="Submit"
                   />
                 </div>
               )}
 
               {composeStep === "preview" && recipients && (
-                <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
-                  <StepLabel n={4}>Email preview</StepLabel>
+                <div>
+                  <StepHeading
+                    title="Preview & send"
+                    description="Check how the personalized email looks for a few recipients before sending."
+                  />
                   {startedJob ? (
                     <SendProgress jobId={startedJob.jobId} total={startedJob.recipientCount} />
                   ) : (
@@ -442,7 +490,7 @@ export default function MailMergePage() {
                         type="button"
                         data-hover="true"
                         onClick={() => setShowPreview((v) => !v)}
-                        className="mb-3 text-sm font-semibold text-brand-blue-deep hover:underline"
+                        className="mb-4 text-sm font-semibold text-brand-blue-deep hover:underline"
                       >
                         {showPreview ? "Hide preview" : "Preview personalized emails"}
                       </button>
@@ -454,7 +502,7 @@ export default function MailMergePage() {
                           uploadedFilenames={uploadedFilenames}
                         />
                       )}
-                      {error && <p className="mt-3 text-sm font-medium text-status-danger">{error}</p>}
+                      {error && <p className="mt-4 text-sm font-medium text-status-danger">{error}</p>}
 
                       <WizardNav
                         onBack={() => setComposeStep("composer")}
@@ -466,47 +514,12 @@ export default function MailMergePage() {
                   )}
                 </div>
               )}
-            </>
-          )}
-
-          <p className="mt-6 flex items-start gap-2 text-xs text-brand-brown-dark/70">
-            <Mail size={14} className="mt-0.5 shrink-0" />
-            Unlike PDF Genie&apos;s other tools, Mail Merge has to send your recipient list,
-            message, and attachments to our server to deliver the emails — they aren&apos;t
-            processed locally in your browser.
-          </p>
-        </div>
-
-        <div className="space-y-6">
-          <UsageCard refreshKey={usageRefreshKey} />
-
-          <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
-            <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-brand-blue-deep" />
-              <h3 className="text-sm font-bold uppercase tracking-wide text-brand-brown-dark">Pro</h3>
             </div>
-            <ul className="mt-3 space-y-2">
-              {PREMIUM_FEATURES.map((feature) => (
-                <li key={feature} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-brand-brown-dark/70">
-                    <Lock size={12} className="text-brand-brown-dark/70" />
-                    {feature}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              data-hover="true"
-              onClick={() => setUpgrade({ open: true })}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-brand-blue-deep py-2.5 text-xs font-semibold text-white"
-            >
-              <FileText size={14} />
-              Upgrade to Pro
-            </button>
           </div>
+
+          {PRIVACY_NOTE}
         </div>
-      </div>
+      )}
 
       <UpgradeDialog
         open={upgrade.open}
