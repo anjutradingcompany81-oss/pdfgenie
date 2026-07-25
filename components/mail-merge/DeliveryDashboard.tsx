@@ -91,7 +91,7 @@ export function DeliveryDashboard({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+        <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
           <h3 className="text-sm font-bold text-brand-brown-dark">Success vs Failed</h3>
           <div className="mt-4 space-y-3">
             <BarRow label="Sent" value={sent} max={total} colorClass="bg-status-success" />
@@ -101,7 +101,7 @@ export function DeliveryDashboard({
         </div>
 
         {perMinuteRows.length > 0 && (
-          <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+          <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
             <h3 className="text-sm font-bold text-brand-brown-dark">Emails sent per minute</h3>
             <div className="mt-4 max-h-40 space-y-2 overflow-y-auto">
               {perMinuteRows.map(([minute, count]) => (
@@ -118,7 +118,7 @@ export function DeliveryDashboard({
         )}
 
         {departmentRows.length > 0 && (
-          <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6 lg:col-span-2">
+          <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6 lg:col-span-2">
             <h3 className="text-sm font-bold text-brand-brown-dark">Department-wise distribution</h3>
             <div className="mt-4 space-y-2">
               {departmentRows.map(([dept, count]) => (

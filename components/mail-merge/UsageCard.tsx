@@ -27,7 +27,7 @@ export function UsageCard({ refreshKey }: { refreshKey: number }) {
   if (!usage) return null;
 
   return (
-    <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+    <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
       <div className="flex items-center gap-2">
         <Gauge size={16} className="text-brand-blue-deep" />
         <h3 className="text-sm font-bold uppercase tracking-wide text-brand-brown-dark">

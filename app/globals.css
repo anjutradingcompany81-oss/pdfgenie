@@ -279,6 +279,14 @@ html.has-custom-cursor * {
   box-shadow: var(--shadow-card) !important;
 }
 
+/* Shared panel surfaces — Mail Merge wizard (components/mail-merge/*)
+   and the Admin users table (app/admin/dashboard/(protected)/users). */
+[data-theme="creative-tim"] .surface-card,
+[data-theme="preline"] .surface-card {
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
 /* Navbar — components/layout/Navbar.tsx */
 [data-theme="creative-tim"] .site-header {
   left: 50% !important;

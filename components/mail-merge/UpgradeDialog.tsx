@@ -58,7 +58,7 @@ export function UpgradeDialog({
         aria-modal="true"
         aria-labelledby="upgrade-dialog-title"
         tabIndex={-1}
-        className="w-full max-w-md rounded-3xl bg-white p-8 outline-none"
+        className="surface-card w-full max-w-md rounded-3xl bg-white p-8 outline-none"
       >
         <div className="flex items-start justify-between">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue-deep">

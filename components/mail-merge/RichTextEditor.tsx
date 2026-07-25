@@ -322,7 +322,7 @@ export function RichTextEditor({
   if (!editor) return null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-brand-brown-dark/15 bg-white">
+    <div className="surface-card overflow-hidden rounded-2xl border border-brand-brown-dark/15 bg-white">
       <Toolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>

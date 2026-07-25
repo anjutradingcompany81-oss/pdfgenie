@@ -71,7 +71,7 @@ export function TemplateLibrary({
   }
 
   return (
-    <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+    <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

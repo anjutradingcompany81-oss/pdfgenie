@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
         </button>
       </form>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-brand-brown-dark/10 bg-white">
+      <div className="surface-card mt-6 overflow-x-auto rounded-2xl border border-brand-brown-dark/10 bg-white">
         {loading ? (
           <div className="flex items-center gap-2 p-6 text-sm text-brand-brown-dark/70">
             <Loader2 size={16} className="animate-spin" />

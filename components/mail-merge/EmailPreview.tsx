@@ -32,7 +32,7 @@ export function EmailPreview({
   );
 
   return (
-    <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+    <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
       <div className="flex items-center justify-between">
         <p className="text-sm font-bold text-brand-brown-dark">
           Preview {index + 1} of {recipients.length}

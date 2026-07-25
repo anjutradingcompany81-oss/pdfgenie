@@ -2,7 +2,7 @@
 
 export function RecipientPreviewTable({ recipients }: { recipients: Recipient[] }) {
   return (
-    <div className="max-h-64 overflow-auto rounded-2xl border border-brand-brown-dark/10 bg-white">
+    <div className="surface-card max-h-64 overflow-auto rounded-2xl border border-brand-brown-dark/10 bg-white">
       <table className="w-full min-w-[280px] text-left text-sm">
         <thead className="sticky top-0 bg-brand-cream">
           <tr className="text-xs uppercase tracking-wide text-brand-brown-dark/70">

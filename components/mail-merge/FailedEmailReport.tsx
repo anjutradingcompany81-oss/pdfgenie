@@ -57,7 +57,7 @@ export function FailedEmailReport({
   }
 
   return (
-    <div className="rounded-2xl border border-status-danger/20 bg-status-danger/5 p-6">
+    <div className="surface-card rounded-2xl border border-status-danger/20 bg-status-danger/5 p-6">
       <div className="flex items-center gap-2">
         <AlertTriangle size={16} className="text-status-danger" />
         <h3 className="text-sm font-bold text-status-danger">Failed emails ({failedRecipients.length})</h3>
