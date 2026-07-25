@@ -1,14 +1,19 @@
 "use client";
 
-import { KeyRound, Loader2, Mail, ShieldCheck, Settings2 } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, KeyRound, Loader2, Mail, ShieldCheck, Settings2, UserCog } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { UploadDialog } from "@/components/mail-merge/UploadDialog";
 import { detectProvider, EMPTY_SMTP_CONFIG, type ProviderPreset, type SmtpConfigState } from "@/lib/mail-merge/smtp-providers";
 
 const inputClass =
   "w-full rounded-full border border-brand-brown-dark/15 px-4 py-2.5 text-sm text-brand-brown-dark outline-none focus:border-brand-blue";
 
 export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfigState) => void }) {
+  const { status: sessionStatus } = useSession();
+  const isSignedIn = sessionStatus === "authenticated";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [detected, setDetected] = useState<ProviderPreset | null>(null);
@@ -21,6 +26,35 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
 
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [autoFilled, setAutoFilled] = useState(false);
+  const [showSavedBanner, setShowSavedBanner] = useState(false);
+  const [forgetting, setForgetting] = useState(false);
+  const [savedPopup, setSavedPopup] = useState<{ email: string; updated: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let cancelled = false;
+    fetch("/api/mail-merge/smtp-credential")
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !data?.config) return;
+        const c = data.config as SmtpConfigState;
+        setEmail(c.user);
+        setPassword(c.password);
+        setHost(c.host);
+        setPort(c.port);
+        setSecure(c.secure);
+        setFromName(c.fromName || "");
+        setDetected(detectProvider(c.user));
+        setAutoFilled(true);
+        setShowSavedBanner(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn]);
 
   function handleEmailBlur() {
     const preset = detectProvider(email);
@@ -40,6 +74,26 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
     }
   }
 
+  function handleUseDifferentAccount() {
+    setForgetting(true);
+    fetch("/api/mail-merge/smtp-credential", { method: "DELETE" })
+      .catch(() => {})
+      .finally(() => {
+        setEmail("");
+        setPassword("");
+        setHost("");
+        setPort("587");
+        setSecure(false);
+        setFromName("");
+        setDetected(null);
+        setUnrecognized(false);
+        setShowAdvanced(false);
+        setAutoFilled(false);
+        setShowSavedBanner(false);
+        setForgetting(false);
+      });
+  }
+
   async function handleVerifyAndContinue() {
     setError(null);
     if (!email || !password) {
@@ -55,14 +109,14 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
       const res = await fetch("/api/mail-merge/verify-smtp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ host, port, secure, user: email, password }),
+        body: JSON.stringify({ host, port, secure, user: email, password, fromName }),
       });
       const data = await res.json();
       if (!data.ok) {
         setError(data.error || "Couldn't sign in with those details.");
         return;
       }
-      onContinue({
+      const config: SmtpConfigState = {
         useCustom: true,
         host,
         port,
@@ -71,7 +125,12 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
         password,
         fromEmail: email,
         fromName,
-      });
+      };
+      if (data.saved) {
+        setSavedPopup({ email, updated: autoFilled });
+      } else {
+        onContinue(config);
+      }
     } catch {
       setError("Something went wrong verifying that account. Try again.");
     } finally {
@@ -88,6 +147,25 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
           PDF Genie&apos;s address.
         </p>
       </div>
+
+      {showSavedBanner && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-success/30 bg-status-success/10 px-4 py-3 text-xs text-brand-brown-dark">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 size={15} className="shrink-0 text-status-success" />
+            We filled in your saved SMTP login (<span className="font-semibold">{email}</span>). Not you, or want
+            to switch accounts?
+          </span>
+          <button
+            type="button"
+            onClick={handleUseDifferentAccount}
+            disabled={forgetting}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-brand-brown-dark/15 bg-white px-3 py-1.5 font-semibold text-brand-brown-dark disabled:opacity-60"
+          >
+            {forgetting ? <Loader2 size={12} className="animate-spin" /> : <UserCog size={12} />}
+            Use a different account
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border-2 border-brand-blue/40 bg-brand-blue/5 p-4">
@@ -123,7 +201,7 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
               onChange={(e) => setEmail(e.target.value)}
               onBlur={handleEmailBlur}
               placeholder="Your email address"
-              autoComplete="email"
+              autoComplete="off"
               className={`${inputClass} pl-9`}
             />
             <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-brown-dark/70" />
@@ -134,7 +212,7 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password / app password"
-              autoComplete="off"
+              autoComplete="new-password"
               className={`${inputClass} pl-9`}
             />
             <KeyRound size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-brown-dark/70" />
@@ -214,7 +292,9 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
 
         <p className="flex items-start gap-2 text-xs text-brand-brown-dark/70">
           <ShieldCheck size={14} className="mt-0.5 shrink-0" />
-          Never stored — used only in memory to send this one job, then discarded.
+          {isSignedIn
+            ? "Saved securely to your account once verified, so you won't need to re-enter it next time. You can switch accounts anytime."
+            : "Never stored — used only in memory to send this one job, then discarded."}
         </p>
       </div>
 
@@ -228,6 +308,39 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
           Skip — send from PDF Genie&apos;s address instead
         </button>
       </div>
+
+      <UploadDialog
+        open={savedPopup !== null}
+        title={savedPopup?.updated ? "Login details updated" : "Login details saved"}
+        onClose={() => {
+          if (!savedPopup) return;
+          const config: SmtpConfigState = { useCustom: true, host, port, secure, user: email, password, fromEmail: email, fromName };
+          setSavedPopup(null);
+          onContinue(config);
+        }}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-brand-brown-dark/80">
+            {savedPopup?.updated ? (
+              <>We&apos;ve updated the saved SMTP login for <span className="font-semibold">{savedPopup.email}</span> on your account.</>
+            ) : (
+              <>We&apos;ve securely saved this SMTP login for <span className="font-semibold">{savedPopup?.email}</span> to your account.</>
+            )}{" "}
+            Next time you use Mail Merge, we&apos;ll fill it in automatically — no need to sign in again. You can
+            always switch accounts from this screen.
+          </p>
+          <MagneticButton
+            onClick={() => {
+              if (!savedPopup) return;
+              const config: SmtpConfigState = { useCustom: true, host, port, secure, user: email, password, fromEmail: email, fromName };
+              setSavedPopup(null);
+              onContinue(config);
+            }}
+          >
+            Got it, continue
+          </MagneticButton>
+        </div>
+      </UploadDialog>
     </div>
   );
 }

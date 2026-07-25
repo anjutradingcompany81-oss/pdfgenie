@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { lookup } from "node:dns/promises";
 import nodemailer from "nodemailer";
 import { clientIp, isThrottled } from "@/lib/rate-limit";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { encryptSmtpPassword, smtpCredentialsConfigured } from "@/lib/mail-merge/smtp-credential-crypto";
 
 export const runtime = "nodejs";
 
@@ -101,6 +104,7 @@ export async function POST(request: Request) {
   // ("xxxx xxxx xxxx xxxx") — the real password has no spaces, so strip
   // all whitespace in case it got copied verbatim.
   const password = typeof body?.password === "string" ? body.password.replace(/\s+/g, "") : "";
+  const fromName = typeof body?.fromName === "string" ? body.fromName.trim() : "";
 
   if (!host || !user || !password) {
     return NextResponse.json({ ok: false, error: "Host, username, and password are required." }, { status: 400 });
@@ -130,7 +134,22 @@ export async function POST(request: Request) {
 
   try {
     await transport.verify();
-    return NextResponse.json({ ok: true });
+
+    let saved = false;
+    if (smtpCredentialsConfigured()) {
+      const session = await auth();
+      const userId = session?.user?.id;
+      if (userId) {
+        await prisma.smtpCredential.upsert({
+          where: { userId },
+          create: { userId, host, port, secure, smtpUser: user, passwordEnc: encryptSmtpPassword(password), fromEmail: user, fromName: fromName || null },
+          update: { host, port, secure, smtpUser: user, passwordEnc: encryptSmtpPassword(password), fromEmail: user, fromName: fromName || null },
+        });
+        saved = true;
+      }
+    }
+
+    return NextResponse.json({ ok: true, saved });
   } catch (err) {
     const rawMessage = err instanceof Error ? err.message : "Couldn't connect with those settings.";
     return NextResponse.json({

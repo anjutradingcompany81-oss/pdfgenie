@@ -534,6 +534,20 @@ export default function MailMergePage() {
                     title="Compose your email"
                     description="Write once, personalize for everyone with merge fields from your Excel columns."
                   />
+                  <div className="mb-5">
+                    <TemplateLibrary
+                      currentSubject={subject}
+                      currentBody={body}
+                      onApply={(s, b) => {
+                        setSubject(s);
+                        setBody(b);
+                      }}
+                    />
+                    <p className="mt-1.5 px-1 text-xs text-brand-brown-dark/50">
+                      Optional — start from a saved template, or skip straight to writing below.
+                    </p>
+                  </div>
+
                   {columns.length > 0 && (
                     <p className="mb-5 flex flex-wrap gap-1.5 text-xs text-brand-brown-dark/70">
                       Merge fields — click to insert at your cursor:{" "}
@@ -561,17 +575,6 @@ export default function MailMergePage() {
                       content={body}
                       onChange={setBody}
                       placeholder="Write your message. Use {{FieldName}} to personalize."
-                    />
-                  </div>
-
-                  <div className="mt-5">
-                    <TemplateLibrary
-                      currentSubject={subject}
-                      currentBody={body}
-                      onApply={(s, b) => {
-                        setSubject(s);
-                        setBody(b);
-                      }}
                     />
                   </div>
                   {error && <p className="mt-4 text-sm font-medium text-status-danger">{error}</p>}

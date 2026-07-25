@@ -32,6 +32,7 @@ model User {
   billingHistory BillingHistory[]
   mailMergeJobs  MailMergeJob[]
   emailTemplates EmailTemplate[]
+  smtpCredential SmtpCredential?
 
   @@map("users")
 }
@@ -287,15 +288,15 @@ enum MailMergeRecipientStatus {
 }
 
 model MailMergeRecipient {
-  id           String                   @id @default(cuid())
-  jobId        String
-  email        String
-  cc           String?
-  bcc          String?
-  status       MailMergeRecipientStatus @default(PENDING)
-  error        String?
-  smtpResponse String?                  @db.Text
-  retryCount   Int                      @default(0)
+  id              String                   @id @default(cuid())
+  jobId           String
+  email           String
+  cc              String?
+  bcc             String?
+  status          MailMergeRecipientStatus @default(PENDING)
+  error           String?
+  smtpResponse    String?                  @db.Text
+  retryCount      Int                      @default(0)
   // Comma-joined names of the uploaded attachment(s) actually sent to this
   // recipient — resolved per-row from an "Attachment" column when present,
   // see lib/mail-merge/resolve-attachments.ts.
@@ -304,12 +305,12 @@ model MailMergeRecipient {
   // which is deliberately never persisted — see resolvePdfPassword in
   // lib/mail-merge/render-template.ts). Needed to re-render the template on
   // retry without the original file.
-  fields       Json?
-  sentAt       DateTime?
+  fields          Json?
+  sentAt          DateTime?
   // Captured when send-recipient.ts sends successfully — the provider's
   // message-id and how long the SMTP call took, surfaced in the log export.
-  messageId    String?
-  durationMs   Int?
+  messageId       String?
+  durationMs      Int?
 
   job MailMergeJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
@@ -332,17 +333,41 @@ model WaitlistSignup {
 // (see prisma/seed.ts) and treated as read-only by the UI. User-saved
 // templates are real, editable/duplicable/deletable rows.
 model EmailTemplate {
-  id         String   @id @default(cuid())
-  userId     String?
-  name       String
-  subject    String
-  body       String   @db.Text
-  isBuiltIn  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String?
+  name      String
+  subject   String
+  body      String   @db.Text
+  isBuiltIn Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("email_templates")
+}
+
+// A signed-in user's own SMTP login for Mail Merge, saved so they don't have
+// to re-enter it every job. One row per user (userId unique) — re-verifying
+// with different details overwrites it in place. `passwordEnc` is AES-256-GCM
+// ciphertext (see lib/mail-merge/smtp-credential-crypto.ts), never plaintext;
+// anonymous users never get a row here, matching the anonymous-only "never
+// persisted, in-memory for this job only" flow that predates this table.
+model SmtpCredential {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  host        String
+  port        Int
+  secure      Boolean
+  smtpUser    String
+  passwordEnc String   @db.Text
+  fromEmail   String
+  fromName    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("smtp_credentials")
 }
