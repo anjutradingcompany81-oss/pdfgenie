@@ -78,12 +78,21 @@ function WizardNav({
   onNext,
   nextLabel = "Submit",
   nextDisabled = false,
+  nextVariant = "primary",
 }: {
   onBack?: () => void;
   onCancel: () => void;
   onNext: () => void;
   nextLabel?: string;
   nextDisabled?: boolean;
+  /**
+   * "primary" (default) is the highlighted gradient CTA — used for the
+   * step that actually does the consequential thing (advance with a real
+   * send, etc.). "secondary" is a plain outline button, used where the
+   * next step is itself a review/preview step, so the emphasis stays on
+   * looking at that preview rather than looking like a send button.
+   */
+  nextVariant?: "primary" | "secondary";
 }) {
   return (
     <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-brand-brown-dark/10 pt-7">
@@ -105,9 +114,20 @@ function WizardNav({
           Cancel
         </button>
       </div>
-      <MagneticButton onClick={onNext} disabled={nextDisabled}>
-        {nextLabel}
-      </MagneticButton>
+      {nextVariant === "secondary" ? (
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={nextDisabled}
+          className="rounded-full border border-brand-blue-deep/40 px-6 py-3 text-sm font-semibold text-brand-blue-deep transition-colors hover:bg-brand-blue/5 disabled:opacity-50"
+        >
+          {nextLabel}
+        </button>
+      ) : (
+        <MagneticButton onClick={onNext} disabled={nextDisabled}>
+          {nextLabel}
+        </MagneticButton>
+      )}
     </div>
   );
 }
@@ -567,6 +587,7 @@ export default function MailMergePage() {
                       setError(null);
                       setComposeStep("preview");
                     }}
+                    nextLabel="Preview email"
                   />
                 </div>
               )}
