@@ -15,7 +15,7 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import {
   Bold,
   Italic,
@@ -79,7 +79,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           if (value === "Default") editor.chain().focus().unsetFontFamily().run();
           else editor.chain().focus().setFontFamily(value).run();
         }}
-        className="h-8 rounded-lg border border-brand-brown-dark/15 bg-white px-1 text-xs text-brand-brown-dark"
+        className="h-8 max-w-[110px] rounded-lg border border-brand-brown-dark/15 bg-white px-1 text-xs text-brand-brown-dark"
         defaultValue="Default"
       >
         {FONT_FAMILIES.map((f) => (
@@ -91,7 +91,7 @@ function Toolbar({ editor }: { editor: Editor }) {
 
       <select
         onChange={(e) => editor.chain().focus().setFontSize(e.target.value).run()}
-        className="h-8 rounded-lg border border-brand-brown-dark/15 bg-white px-1 text-xs text-brand-brown-dark"
+        className="h-8 max-w-[70px] rounded-lg border border-brand-brown-dark/15 bg-white px-1 text-xs text-brand-brown-dark"
         defaultValue="16px"
       >
         {FONT_SIZES.map((s) => (
@@ -273,58 +273,67 @@ function Toolbar({ editor }: { editor: Editor }) {
   );
 }
 
-export function RichTextEditor({
-  content,
-  onChange,
-  placeholder,
-}: {
-  content: string;
-  onChange: (html: string) => void;
-  placeholder?: string;
-}) {
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit,
-      Underline,
-      TextStyle,
-      Color,
-      FontFamily,
-      FontSize,
-      Highlight.configure({ multicolor: true }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      Link.configure({ openOnClick: false }),
-      Image,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Placeholder.configure({ placeholder: placeholder || "Write your message…" }),
-    ],
-    content,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
-    editorProps: {
-      attributes: {
-        class: "prose prose-sm max-w-none px-5 py-4 min-h-[220px] focus:outline-none",
+export type RichTextEditorHandle = {
+  /** Inserts text at the current cursor position — not appended to the end of the document. */
+  insertText: (text: string) => void;
+};
+
+export const RichTextEditor = forwardRef<RichTextEditorHandle, { content: string; onChange: (html: string) => void; placeholder?: string }>(
+  function RichTextEditor({ content, onChange, placeholder }, ref) {
+    const editor = useEditor({
+      immediatelyRender: false,
+      extensions: [
+        StarterKit,
+        Underline,
+        TextStyle,
+        Color,
+        FontFamily,
+        FontSize,
+        Highlight.configure({ multicolor: true }),
+        Table.configure({ resizable: true }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        Link.configure({ openOnClick: false }),
+        Image,
+        TextAlign.configure({ types: ["heading", "paragraph"] }),
+        Placeholder.configure({ placeholder: placeholder || "Write your message…" }),
+      ],
+      content,
+      onUpdate: ({ editor }) => onChange(editor.getHTML()),
+      editorProps: {
+        attributes: {
+          class: "prose prose-sm max-w-none px-5 py-4 min-h-[220px] focus:outline-none",
+        },
       },
-    },
-  });
+    });
 
-  // Keep the editor in sync when `content` is replaced from outside (e.g.
-  // loading a template) rather than typed.
-  useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, { emitUpdate: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content]);
+    useImperativeHandle(
+      ref,
+      () => ({
+        insertText: (text: string) => {
+          editor?.chain().focus().insertContent(text).run();
+        },
+      }),
+      [editor]
+    );
 
-  if (!editor) return null;
+    // Keep the editor in sync when `content` is replaced from outside (e.g.
+    // loading a template) rather than typed.
+    useEffect(() => {
+      if (editor && content !== editor.getHTML()) {
+        editor.commands.setContent(content, { emitUpdate: false });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [content]);
 
-  return (
-    <div className="surface-card overflow-hidden rounded-2xl border border-brand-brown-dark/15 bg-white">
-      <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
-    </div>
-  );
-}
+    if (!editor) return null;
+
+    return (
+      <div className="surface-card overflow-hidden rounded-2xl border border-brand-brown-dark/15 bg-white">
+        <Toolbar editor={editor} />
+        <EditorContent editor={editor} />
+      </div>
+    );
+  }
+);

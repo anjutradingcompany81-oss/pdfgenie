@@ -16,7 +16,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ToolShell } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
@@ -26,7 +26,7 @@ import { UpgradeDialog } from "@/components/mail-merge/UpgradeDialog";
 import { RecipientPreviewTable } from "@/components/mail-merge/RecipientPreviewTable";
 import { SendMethodStep } from "@/components/mail-merge/SendMethodStep";
 import { EMPTY_SMTP_CONFIG, type SmtpConfigState } from "@/lib/mail-merge/smtp-providers";
-import { RichTextEditor } from "@/components/mail-merge/RichTextEditor";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/mail-merge/RichTextEditor";
 import { TemplateLibrary } from "@/components/mail-merge/TemplateLibrary";
 import { EmailPreview } from "@/components/mail-merge/EmailPreview";
 import { AttachmentFolderPicker, attachmentLeafName } from "@/components/mail-merge/AttachmentFolderPicker";
@@ -141,6 +141,7 @@ export default function MailMergePage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [startedJob, setStartedJob] = useState<{ jobId: string; recipientCount: number } | null>(null);
 
+  const richTextRef = useRef<RichTextEditorHandle>(null);
   const [usageRefreshKey, setUsageRefreshKey] = useState(0);
   const [upgrade, setUpgrade] = useState<{ open: boolean; message?: string }>({ open: false });
 
@@ -485,12 +486,12 @@ export default function MailMergePage() {
                   />
                   {columns.length > 0 && (
                     <p className="mb-5 flex flex-wrap gap-1.5 text-xs text-brand-brown-dark/70">
-                      Merge fields:{" "}
+                      Merge fields — click to insert at your cursor:{" "}
                       {[...columns, "Current Date"].map((c) => (
                         <button
                           key={c}
                           type="button"
-                          onClick={() => setBody((b) => `${b}{{${c}}}`)}
+                          onClick={() => richTextRef.current?.insertText(`{{${c}}}`)}
                           className="rounded-full bg-brand-blue/10 px-2 py-0.5 font-mono text-brand-blue-deep hover:bg-brand-blue/20"
                         >
                           {`{{${c}}}`}
@@ -505,7 +506,12 @@ export default function MailMergePage() {
                       placeholder="Subject — e.g. Promotion Letter - {{Name}}"
                       className="w-full rounded-full border border-brand-brown-dark/15 px-5 py-3 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
                     />
-                    <RichTextEditor content={body} onChange={setBody} placeholder="Write your message. Use {{FieldName}} to personalize." />
+                    <RichTextEditor
+                      ref={richTextRef}
+                      content={body}
+                      onChange={setBody}
+                      placeholder="Write your message. Use {{FieldName}} to personalize."
+                    />
                   </div>
 
                   <div className="mt-5">
