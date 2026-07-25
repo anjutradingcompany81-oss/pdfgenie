@@ -19,6 +19,11 @@ export async function syncSubscription(params: {
 }): Promise<void> {
   const plan = await prisma.plan.findUniqueOrThrow({ where: { key: params.planKey } });
 
+  // A fresh ACTIVE sync means either a brand-new subscription or a renewal
+  // charge succeeding — either way any earlier "cancel at period end" no
+  // longer applies (relevant if someone re-subscribes after cancelling).
+  const cancelAtPeriodEnd = params.status === "ACTIVE" ? false : undefined;
+
   await prisma.subscription.upsert({
     where: { userId: params.userId },
     update: {
@@ -28,6 +33,7 @@ export async function syncSubscription(params: {
       providerCustomerId: params.providerCustomerId ?? undefined,
       providerSubscriptionId: params.providerSubscriptionId,
       currentPeriodEnd: params.currentPeriodEnd,
+      cancelAtPeriodEnd,
     },
     create: {
       userId: params.userId,

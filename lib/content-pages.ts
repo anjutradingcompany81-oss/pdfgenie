@@ -16,6 +16,16 @@ const DEFAULTS: Record<ContentSlug, { title: string; body: string }> = {
     title: "Terms & Conditions",
     body: "By using PDF Genie you agree to use the service lawfully and not to abuse it. The service is provided as-is, without warranty.",
   },
+  "refund-policy": {
+    title: "Cancellation & Refund Policy",
+    body: `Pro (₹999/month) and Team (₹2,999/month) are billed monthly through Razorpay.
+
+Refunds: If you're on your first billing cycle of a paid plan and you're not satisfied, email us within 7 days of that first charge and we'll issue a full refund. Refunds are not available for renewal charges (your second month onward on the same subscription) or for Free-plan usage.
+
+Cancelling: You can cancel anytime from your dashboard. When you cancel, you keep Pro/Team access through the end of the period you already paid for — there's no partial-period refund, and you won't be charged again after that. Your account then moves to the Free plan automatically.
+
+To request a refund or get help with billing, email anjutradingcompany81@gmail.com with your account email and the approximate date of the charge.`,
+  },
   contact: {
     title: "Contact us",
     body: "Questions or feedback? Reach us using the contact email listed in the site settings.",

@@ -1,9 +1,9 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 
 declare global {
@@ -32,6 +32,8 @@ function loadCheckoutScript(): Promise<void> {
   return checkoutScriptPromise;
 }
 
+type Phase = "idle" | "processing" | "success" | "cancelled";
+
 export function CheckoutButton({
   planKey,
   planLabel,
@@ -47,11 +49,17 @@ export function CheckoutButton({
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+  // A successful `handler` fire always precedes Razorpay's own auto-close of
+  // the modal, which also triggers `ondismiss` — this guards against that
+  // from overwriting the success state with a false "cancelled" message.
+  const succeededRef = useRef(false);
 
   async function handleClick() {
     setError(null);
+    setPhase("idle");
+    succeededRef.current = false;
 
     if (status !== "authenticated") {
       const callbackUrl = window.location.pathname + window.location.hash;
@@ -59,7 +67,7 @@ export function CheckoutButton({
       return;
     }
 
-    setLoading(true);
+    setPhase("processing");
     try {
       const checkoutRes = await fetch("/api/billing/checkout", {
         method: "POST",
@@ -80,6 +88,8 @@ export function CheckoutButton({
         prefill: { name: session.user?.name ?? undefined, email: session.user?.email ?? undefined },
         theme: { color: "#1e3a8a" },
         handler: async (response: unknown) => {
+          succeededRef.current = true;
+          setPhase("success");
           const r = response as {
             razorpay_payment_id: string;
             razorpay_subscription_id: string;
@@ -96,29 +106,49 @@ export function CheckoutButton({
             // Not fatal — the webhook will reconcile the subscription within
             // seconds even if this optimistic confirmation call failed.
           } finally {
-            router.push("/dashboard?upgraded=1");
+            // Give the "Payment successful" state a moment to actually be seen
+            // before navigating away.
+            setTimeout(() => router.push("/dashboard?upgraded=1"), 1200);
           }
         },
         modal: {
-          ondismiss: () => setLoading(false),
+          ondismiss: () => {
+            if (succeededRef.current) return;
+            setPhase("cancelled");
+          },
         },
       });
       razorpay.on("payment.failed", () => {
         setError("Payment failed — no charge was made. Please try again.");
-        setLoading(false);
+        setPhase("idle");
       });
       razorpay.open();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong — please try again.");
-      setLoading(false);
+      setPhase("idle");
     }
   }
 
   return (
     <div>
-      <MagneticButton onClick={handleClick} disabled={loading} variant={variant} className={className}>
-        {loading ? <Loader2 size={16} className="animate-spin" /> : children}
+      <MagneticButton onClick={handleClick} disabled={phase === "processing" || phase === "success"} variant={variant} className={className}>
+        {phase === "processing" ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : phase === "success" ? (
+          <>
+            <Check size={16} />
+            Activating your plan…
+          </>
+        ) : (
+          children
+        )}
       </MagneticButton>
+      {phase === "cancelled" && (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-brand-brown-dark/60">
+          <X size={12} />
+          Checkout cancelled — no charge was made.
+        </p>
+      )}
       {error && <p className="mt-2 text-xs font-medium text-status-danger">{error}</p>}
     </div>
   );

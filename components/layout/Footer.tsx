@@ -27,6 +27,7 @@ const COLUMNS = [
     links: [
       { label: "Privacy Policy", href: "/privacy-policy" },
       { label: "Terms & Conditions", href: "/terms" },
+      { label: "Cancellation & Refunds", href: "/refund-policy" },
     ],
   },
 ];
@@ -52,6 +53,12 @@ export function Footer() {
             <p className="mt-5 max-w-sm text-white/60">
               The fastest way to merge, split, compress, convert, and sign
               PDFs — right in your browser.
+            </p>
+            <p className="mt-3 text-sm text-white/60">
+              Need help?{" "}
+              <a href="mailto:anjutradingcompany81@gmail.com" data-hover="true" className="text-white/85 underline hover:text-brand-blue-light">
+                anjutradingcompany81@gmail.com
+              </a>
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 max-w-md">

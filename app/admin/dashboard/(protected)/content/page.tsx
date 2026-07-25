@@ -8,6 +8,7 @@ const LABELS: Record<ContentSlug, string> = {
   faq: "FAQ",
   "privacy-policy": "Privacy Policy",
   terms: "Terms & Conditions",
+  "refund-policy": "Cancellation & Refund Policy",
   contact: "Contact Information",
   about: "About Us",
 };

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { Reveal } from "@/components/ui/Reveal";
 import { getCurrentPlan } from "@/lib/plans/get-current-plan";
 import { PLAN_DISPLAY } from "@/lib/plans/config";
+import { CancelSubscriptionButton } from "@/components/dashboard/CancelSubscriptionButton";
 
 const QUICK_LINKS = [
   { href: "/tools/merge", icon: Combine, label: "Merge" },
@@ -27,6 +28,7 @@ export default async function DashboardPage() {
   });
 
   const plan = await getCurrentPlan(session!.user.id);
+  const subscription = await prisma.subscription.findUnique({ where: { userId: session!.user.id } });
 
   const memberSince = user?.createdAt.toLocaleDateString("en-US", {
     year: "numeric",
@@ -80,13 +82,36 @@ export default async function DashboardPage() {
                   </Link>
                 )}
               </p>
-              <Link
-                href="/dashboard/profile"
-                data-hover="true"
-                className="mt-5 inline-block text-sm font-semibold text-brand-blue-deep hover:underline"
-              >
-                Edit profile
-              </Link>
+
+              {subscription?.cancelAtPeriodEnd && subscription.currentPeriodEnd && (
+                <p className="mt-2 text-xs text-brand-brown-dark/70">
+                  Ends{" "}
+                  {subscription.currentPeriodEnd.toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" })}
+                  , then moves to Free.
+                </p>
+              )}
+              {subscription?.status === "ACTIVE" && !subscription.cancelAtPeriodEnd && (
+                <div className="mt-2">
+                  <CancelSubscriptionButton />
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-wrap gap-x-4 gap-y-1">
+                <Link
+                  href="/dashboard/profile"
+                  data-hover="true"
+                  className="text-sm font-semibold text-brand-blue-deep hover:underline"
+                >
+                  Edit profile
+                </Link>
+                <Link
+                  href="/dashboard/billing"
+                  data-hover="true"
+                  className="text-sm font-semibold text-brand-blue-deep hover:underline"
+                >
+                  Billing history
+                </Link>
+              </div>
             </div>
           </Reveal>
 
