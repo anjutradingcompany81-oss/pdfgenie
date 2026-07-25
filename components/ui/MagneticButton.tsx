@@ -48,11 +48,14 @@ export function MagneticButton({
 
   const base =
     "relative inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-semibold tracking-wide transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-blue-light";
+  // Marker classes (magnetic-solid/outline/inverted) carry no styles of their
+  // own — they're theme-scoped selector hooks for globals.css so Creative
+  // Tim/Preline can restyle each variant without a second JS dimension.
   const solid =
-    "bg-gradient-to-r from-brand-blue-deep to-brand-blue text-white shadow-[0_0_0_0_rgba(143,179,255,0)] hover:brightness-110 hover:shadow-[0_0_30px_-6px_var(--color-brand-blue-light)]";
+    "magnetic-solid bg-gradient-to-r from-brand-blue-deep to-brand-blue text-white shadow-[0_0_0_0_rgba(143,179,255,0)] hover:brightness-110 hover:shadow-[0_0_30px_-6px_var(--color-brand-blue-light)]";
   const outline =
-    "border-2 border-brand-brown/60 text-foreground hover:border-brand-brown hover:bg-brand-brown/10";
-  const inverted = "bg-brand-gold-glow text-[#12131f] hover:brightness-105";
+    "magnetic-outline border-2 border-brand-brown/60 text-foreground hover:border-brand-brown hover:bg-brand-brown/10";
+  const inverted = "magnetic-inverted bg-brand-gold-glow text-brand-brown-dark hover:brightness-105";
 
   const variantClass =
     variant === "solid" ? solid : variant === "outline" ? outline : inverted;

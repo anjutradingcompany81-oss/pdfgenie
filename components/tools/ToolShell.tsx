@@ -34,7 +34,7 @@ export function ToolShell({ icon: Icon, title, description, children }: ToolShel
         </Link>
 
         <div className="mt-6 flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue-deep">
+          <div className="tool-shell-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue-deep">
             <Icon size={26} />
           </div>
           <div>

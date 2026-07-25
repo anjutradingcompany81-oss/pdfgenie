@@ -52,13 +52,13 @@ export function Dropzone({
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
-      className={`flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed px-6 py-16 text-center transition-colors duration-200 ${
+      className={`dropzone flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed px-6 py-16 text-center transition-colors duration-200 ${
         dragging
           ? "border-brand-blue bg-brand-blue/5"
           : "border-brand-brown-dark/20 bg-white hover:border-brand-blue/40"
       }`}
     >
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue-deep">
+      <div className="dropzone-icon flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue-deep">
         <UploadCloud size={28} />
       </div>
       <div>

@@ -42,7 +42,7 @@ export function Footer() {
   }
 
   return (
-    <footer className="bg-brand-brown-dark px-6 pb-10 pt-20 text-white lg:px-10">
+    <footer className="site-footer relative bg-brand-brown-dark px-6 pb-10 pt-20 text-white lg:px-10">
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-16 border-b border-white/10 pb-16 lg:grid-cols-[1.3fr_1fr]">
           <Reveal>

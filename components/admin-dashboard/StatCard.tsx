@@ -12,7 +12,7 @@ export function StatCard({
   note?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+    <div className="stat-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-blue-deep">
         <Icon size={18} />
       </div>

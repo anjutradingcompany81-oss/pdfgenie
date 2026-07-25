@@ -35,7 +35,7 @@ export function Navbar() {
   return (
     <>
       <motion.header
-        className={`fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow,padding] duration-300 ${
+        className={`site-header fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow,padding] duration-300 ${
           scrolled
             ? "bg-brand-cream/90 py-3 shadow-sm backdrop-blur-md"
             : "bg-transparent py-6"

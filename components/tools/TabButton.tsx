@@ -17,7 +17,7 @@ export function TabButton({
       data-hover="true"
       onClick={onClick}
       className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
-        active ? "bg-brand-blue-deep text-white" : "text-brand-brown-dark/70 hover:text-brand-brown-dark"
+        active ? "tab-button-active bg-brand-blue-deep text-white" : "text-brand-brown-dark/70 hover:text-brand-brown-dark"
       }`}
     >
       {children}
