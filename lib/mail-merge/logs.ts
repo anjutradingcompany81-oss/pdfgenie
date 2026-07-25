@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { prisma } from "@/lib/db";
 import { findField } from "@/lib/mail-merge/render-template";
@@ -92,11 +93,37 @@ function toLabeledRows(rows: LogRow[]): Record<string, string | number>[] {
   });
 }
 
-export function logToXlsx(rows: LogRow[]): Buffer {
-  const ws = XLSX.utils.json_to_sheet(toLabeledRows(rows));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Mail Merge Log");
-  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+// Row fill colors by delivery status. The free "xlsx" (SheetJS Community
+// Edition) package used elsewhere in this file cannot write cell styles —
+// that's a SheetJS Pro-only feature — so this one export uses exceljs
+// instead, which supports styled writes.
+const STATUS_FILL: Record<string, string> = {
+  SENT: "FFC6EFCE", // green
+  FAILED: "FFFFC7CE", // red
+  CANCELLED: "FFFFEB9C", // yellow
+  SKIPPED: "FFFFEB9C", // yellow
+};
+
+export async function logToXlsx(rows: LogRow[]): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Mail Merge Log");
+
+  const columns = Object.keys(COLUMN_LABELS) as (keyof LogRow)[];
+  ws.columns = columns.map((key) => ({ header: COLUMN_LABELS[key], key }));
+  ws.getRow(1).font = { bold: true };
+
+  for (const row of rows) {
+    const addedRow = ws.addRow(row);
+    const fill = STATUS_FILL[row.deliveryStatus];
+    if (fill) {
+      addedRow.eachCell((cell) => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
+      });
+    }
+  }
+
+  const buffer = await wb.xlsx.writeBuffer();
+  return Buffer.from(buffer);
 }
 
 export function logToCsv(rows: LogRow[]): string {

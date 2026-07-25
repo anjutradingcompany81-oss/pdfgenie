@@ -30,7 +30,7 @@ export async function GET(
   }
 
   let body: Buffer | Uint8Array | string;
-  if (format === "xlsx") body = logToXlsx(data.rows);
+  if (format === "xlsx") body = await logToXlsx(data.rows);
   else if (format === "csv") body = logToCsv(data.rows);
   else if (format === "json") body = logToJson(data.rows);
   else body = await logToPdf(data.rows);

@@ -54,4 +54,19 @@ export const BUILT_IN_TEMPLATES = [
     subject: "Notice from {{Company Name}}",
     body: `<p>Dear {{Employee Name}},</p><p>[Write your message here.]</p><p>Regards,<br>{{Company Name}}</p>`,
   },
+  {
+    name: "Employment Offer Letter",
+    subject: "Employment Offer - {{Employee Name}}",
+    body: `<p>Dear {{Employee Name}},</p><p>Congratulations! We are delighted to extend a formal offer of employment for the position of {{Designation}} in the {{Department}} department at {{Company Name}}, effective {{Current Date}}.</p><p>Your detailed offer letter, including compensation and terms, is attached.</p><p>If your PDF is password-protected, use the following password to open it: {{PDF Password}}</p><p>We look forward to welcoming you to the team.</p><p>Regards,<br>HR Department, {{Company Name}}</p>`,
+  },
+  {
+    name: "Certificate",
+    subject: "Your Certificate - {{Employee Name}}",
+    body: `<p>Dear {{Employee Name}},</p><p>Please find attached your certificate for {{Designation}}, issued by {{Company Name}} on {{Current Date}}.</p><p>Congratulations on this achievement!</p><p>Regards,<br>{{Company Name}}</p>`,
+  },
+  {
+    name: "Reminder",
+    subject: "Reminder - {{Employee Name}}",
+    body: `<p>Dear {{Employee Name}},</p><p>This is a friendly reminder regarding the matter previously discussed. Please find the relevant details attached.</p><p>If you have already taken action, kindly disregard this message.</p><p>Regards,<br>{{Company Name}}</p>`,
+  },
 ];
