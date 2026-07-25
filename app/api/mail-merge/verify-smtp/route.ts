@@ -39,6 +39,33 @@ function isPrivateIPv6(ip: string): boolean {
   return false;
 }
 
+// Major providers reject a regular account password for SMTP once 2FA (or
+// their own "less secure app" policy) is involved, and their raw rejection
+// text doesn't say so in plain language — point the user at the fix instead
+// of just relaying Google/Microsoft/Yahoo's own error string.
+const APP_PASSWORD_HINTS: { hostIncludes: string; messagePattern: RegExp; hint: string }[] = [
+  {
+    hostIncludes: "gmail.com",
+    messagePattern: /BadCredentials|Username and Password not accepted/i,
+    hint: "Gmail no longer accepts your regular password for SMTP. Turn on 2-Step Verification, then generate an App Password at myaccount.google.com/apppasswords and use that instead.",
+  },
+  {
+    hostIncludes: "office365.com",
+    messagePattern: /5\.7\.139|basic auth|BasicAuth/i,
+    hint: "Outlook/Microsoft 365 has disabled regular-password SMTP login for most accounts. Generate an app password in your Microsoft account's security settings and use that instead.",
+  },
+  {
+    hostIncludes: "yahoo.com",
+    messagePattern: /Invalid login|authentication failed/i,
+    hint: "Yahoo Mail requires an app password for SMTP, not your regular password. Generate one at Yahoo Account Security → Generate app password.",
+  },
+];
+
+function friendlyAuthError(host: string, rawMessage: string): string {
+  const match = APP_PASSWORD_HINTS.find((h) => host.includes(h.hostIncludes) && h.messagePattern.test(rawMessage));
+  return match ? match.hint : rawMessage;
+}
+
 export async function POST(request: Request) {
   const ip = clientIp(request);
   if (isThrottled(`verify-smtp:${ip}`, THROTTLE_MAX, THROTTLE_WINDOW_MS)) {
@@ -82,9 +109,10 @@ export async function POST(request: Request) {
     await transport.verify();
     return NextResponse.json({ ok: true });
   } catch (err) {
+    const rawMessage = err instanceof Error ? err.message : "Couldn't connect with those settings.";
     return NextResponse.json({
       ok: false,
-      error: err instanceof Error ? err.message : "Couldn't connect with those settings.",
+      error: friendlyAuthError(host, rawMessage),
     });
   }
 }
