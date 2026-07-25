@@ -130,7 +130,10 @@ export default function MailMergePage() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
+  // Shown by default on the Preview & send step, so the first recipient's
+  // personalized email is visible immediately — not hidden behind a toggle
+  // the user has to think to click before sending.
+  const [showPreview, setShowPreview] = useState(true);
 
   const [parsing, setParsing] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -171,7 +174,7 @@ export default function MailMergePage() {
     setStartedJob(null);
     setRecipients(null);
     setProblems([]);
-    setShowPreview(false);
+    setShowPreview(true);
     setParsing(true);
     try {
       const formData = new FormData();
@@ -207,7 +210,7 @@ export default function MailMergePage() {
     setBody("");
     setError(null);
     setStartedJob(null);
-    setShowPreview(false);
+    setShowPreview(true);
     setComposeStep("recipients");
   }
 
@@ -540,7 +543,11 @@ export default function MailMergePage() {
                     description="Check how the personalized email looks for a few recipients before sending."
                   />
                   {startedJob ? (
-                    <SendProgress jobId={startedJob.jobId} total={startedJob.recipientCount} />
+                    <SendProgress
+                      jobId={startedJob.jobId}
+                      total={startedJob.recipientCount}
+                      onClose={handleCancelToAuth}
+                    />
                   ) : (
                     <>
                       <button

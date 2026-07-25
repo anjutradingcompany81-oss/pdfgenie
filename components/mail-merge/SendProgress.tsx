@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Ban, CheckCircle2, Download, Loader2, Pause, Play, XCircle } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, Download, Home, Loader2, Pause, Play, X, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type Counts = { PENDING: number; SENT: number; FAILED: number; CANCELLED: number };
@@ -14,7 +14,7 @@ async function postJson(url: string) {
   return { ok: res.ok, data };
 }
 
-export function SendProgress({ jobId, total }: { jobId: string; total: number }) {
+export function SendProgress({ jobId, total, onClose }: { jobId: string; total: number; onClose: () => void }) {
   const [counts, setCounts] = useState<Counts>({ PENDING: total, SENT: 0, FAILED: 0, CANCELLED: 0 });
   const [done, setDone] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -224,6 +224,21 @@ export function SendProgress({ jobId, total }: { jobId: string; total: number })
             <Download size={13} />
             Download log
           </a>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 rounded-full border border-brand-brown-dark/15 px-4 py-2 text-xs font-semibold text-brand-brown-dark"
+          >
+            <X size={13} />
+            Close
+          </button>
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 rounded-full border border-brand-brown-dark/15 px-4 py-2 text-xs font-semibold text-brand-brown-dark"
+          >
+            <Home size={13} />
+            Home
+          </Link>
         </div>
       )}
     </div>
