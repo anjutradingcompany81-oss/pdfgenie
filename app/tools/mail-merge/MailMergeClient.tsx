@@ -72,7 +72,13 @@ function StepHeading({ step, title, description }: { step: WizardStepId; title: 
   );
 }
 
-/** Trigger card that opens an UploadDialog — replaces a bare inline dropzone with a deliberate, styled call to action. */
+/**
+ * Compact row trigger that opens an UploadDialog. Deliberately does NOT look
+ * like a dropzone itself (no dashed border, no big empty box) — the actual
+ * drop target lives inside the modal. Making this look like a second
+ * dropzone reads as two redundant, competing upload areas stacked on the
+ * page instead of one clear "open the upload dialog" action.
+ */
 function UploadTrigger({
   onClick,
   label,
@@ -87,17 +93,17 @@ function UploadTrigger({
       type="button"
       data-hover="true"
       onClick={onClick}
-      className="group flex w-full flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-brand-brown-dark/15 bg-brand-cream/40 px-6 py-12 text-center transition-colors hover:border-brand-blue/40 hover:bg-brand-blue/5"
+      className="group flex w-full items-center gap-4 rounded-2xl border border-brand-brown-dark/15 bg-white p-5 text-left transition-colors hover:border-brand-blue/40 hover:bg-brand-blue/5"
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-blue-deep to-brand-blue text-white shadow-lg shadow-brand-blue/20 transition-transform group-hover:scale-105">
-        <UploadCloud size={26} />
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-blue-deep to-brand-blue text-white shadow-sm shadow-brand-blue/20 transition-transform group-hover:scale-105">
+        <UploadCloud size={20} />
       </div>
-      <div>
-        <p className="text-base font-bold text-brand-brown-dark">{label}</p>
-        <p className="mt-1 text-sm text-brand-brown-dark/60">{hint}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-brand-brown-dark">{label}</p>
+        <p className="mt-0.5 text-xs text-brand-brown-dark/60">{hint}</p>
       </div>
-      <span className="rounded-full bg-brand-blue-deep px-5 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-brand-blue">
-        Choose file
+      <span className="shrink-0 rounded-full bg-brand-blue-deep px-4 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-brand-blue">
+        Upload
       </span>
     </button>
   );
@@ -244,6 +250,15 @@ export default function MailMergePage() {
     setStartedJob(null);
     setShowPreview(false);
     setComposeStep("recipients");
+  }
+
+  // Cancelling from the very first wizard step has nothing to "undo" in the
+  // draft yet, so it cancels the whole attempt and returns to choosing a
+  // sending method instead — otherwise clicking Cancel there looked like it
+  // did nothing (it was only resetting fields that were already empty).
+  function handleCancelToAuth() {
+    reset();
+    setStage("auth");
   }
 
   function handleAttachmentFiles(files: File[]) {
@@ -438,7 +453,11 @@ export default function MailMergePage() {
                   )}
                   {error && <p className="mt-4 text-sm font-medium text-status-danger">{error}</p>}
 
-                  <WizardNav onCancel={reset} onNext={() => setComposeStep("attachments")} nextDisabled={!recipients} />
+                  <WizardNav
+                    onCancel={handleCancelToAuth}
+                    onNext={() => setComposeStep("attachments")}
+                    nextDisabled={!recipients}
+                  />
                 </div>
               )}
 
