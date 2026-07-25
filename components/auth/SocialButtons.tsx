@@ -1,6 +1,5 @@
 "use client";
 
-import { X } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 function GoogleIcon() {
@@ -26,19 +25,7 @@ function GoogleIcon() {
   );
 }
 
-function FacebookIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden="true" fill="#1877F2">
-      <path d="M24 12.07C24 5.68 18.63.4 12 .4S0 5.68 0 12.07c0 5.77 4.39 10.56 10.13 11.44v-8.09H7.08v-3.35h3.05V9.41c0-3 1.8-4.67 4.55-4.67 1.32 0 2.7.23 2.7.23v2.94h-1.52c-1.5 0-1.97.92-1.97 1.87v2.24h3.36l-.54 3.35h-2.82v8.09C19.61 22.63 24 17.84 24 12.07Z" />
-    </svg>
-  );
-}
-
-const PROVIDERS = [
-  { id: "google", label: "Continue with Google", Icon: GoogleIcon },
-  { id: "facebook", label: "Continue with Facebook", Icon: FacebookIcon },
-  { id: "twitter", label: "Continue with X", Icon: () => <X size={18} /> },
-] as const;
+const PROVIDERS = [{ id: "google", label: "Continue with Google", Icon: GoogleIcon }] as const;
 
 export function SocialButtons({ callbackUrl }: { callbackUrl?: string }) {
   return (

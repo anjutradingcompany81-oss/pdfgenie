@@ -1,8 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import Facebook from "next-auth/providers/facebook";
-import Twitter from "next-auth/providers/twitter";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
@@ -53,20 +51,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
-    // Scaffolded and ready to go — sign-in via these providers will fail
+    // Scaffolded and ready to go — sign-in via this provider will fail
     // with a clear "not configured" error until real credentials are set.
-    // See the deployment summary for where to create each app.
+    // See the deployment summary for where to create the app.
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID || "not-configured",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "not-configured",
-    }),
-    Facebook({
-      clientId: process.env.FACEBOOK_CLIENT_ID || "not-configured",
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "not-configured",
-    }),
-    Twitter({
-      clientId: process.env.TWITTER_CLIENT_ID || "not-configured",
-      clientSecret: process.env.TWITTER_CLIENT_SECRET || "not-configured",
     }),
   ],
   callbacks: {

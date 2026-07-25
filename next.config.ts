@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
-// OAuth sign-in (SocialButtons.tsx) redirects full-page to these providers
-// and their callback flow does credentialed form posts back to us — both
-// need explicit allowances or Google/Facebook login breaks silently.
+// OAuth sign-in (SocialButtons.tsx) redirects full-page to Google and its
+// callback flow does a credentialed form post back to us — both need an
+// explicit allowance or Google login breaks silently.
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
@@ -14,7 +14,7 @@ const CSP = [
   "object-src 'none'",
   "base-uri 'self'",
   "frame-ancestors 'self'",
-  "form-action 'self' https://accounts.google.com https://www.facebook.com https://graph.facebook.com",
+  "form-action 'self' https://accounts.google.com",
 ].join("; ");
 
 const securityHeaders = [
