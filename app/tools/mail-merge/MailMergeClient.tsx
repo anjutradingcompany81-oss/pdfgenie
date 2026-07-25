@@ -23,6 +23,7 @@ import { resolveRecipientAttachmentNames, findExtraAndDuplicateFiles } from "@/l
 import type { RowProblem } from "@/lib/mail-merge/parse-recipients";
 
 type Recipient = { email: string; fields: Record<string, string> };
+type ComposeStep = "recipients" | "attachments" | "composer" | "preview";
 
 const PREMIUM_FEATURES = [
   "Scheduled campaigns",
@@ -45,8 +46,49 @@ function StepLabel({ n, children }: { n: number; children: string }) {
   );
 }
 
+function WizardNav({
+  onBack,
+  onCancel,
+  onNext,
+  nextLabel = "Submit",
+  nextDisabled = false,
+}: {
+  onBack?: () => void;
+  onCancel: () => void;
+  onNext: () => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
+}) {
+  return (
+    <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-brand-brown-dark/10 pt-5">
+      <div className="flex gap-3">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-full border border-brand-brown-dark/15 px-5 py-2.5 text-sm font-semibold text-brand-brown-dark hover:border-brand-blue/40"
+          >
+            Back
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full px-5 py-2.5 text-sm font-semibold text-status-danger hover:bg-status-danger/5"
+        >
+          Cancel
+        </button>
+      </div>
+      <MagneticButton onClick={onNext} disabled={nextDisabled}>
+        {nextLabel}
+      </MagneticButton>
+    </div>
+  );
+}
+
 export default function MailMergePage() {
   const [stage, setStage] = useState<"auth" | "compose">("auth");
+  const [composeStep, setComposeStep] = useState<ComposeStep>("recipients");
   const [smtp, setSmtp] = useState<SmtpConfigState>(EMPTY_SMTP_CONFIG);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [recipients, setRecipients] = useState<Recipient[] | null>(null);
@@ -122,9 +164,12 @@ export default function MailMergePage() {
     setProblems([]);
     setColumns([]);
     setAttachments([]);
+    setSubject("");
+    setBody("");
     setError(null);
     setStartedJob(null);
     setShowPreview(false);
+    setComposeStep("recipients");
   }
 
   function handleContinueWithValidOnly() {
@@ -207,191 +252,221 @@ export default function MailMergePage() {
               }}
             />
           ) : (
-          <>
-          <div>
-            <StepLabel n={1}>Sending method</StepLabel>
-            <div className="surface-card flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-brown-dark/10 bg-white p-4 text-sm">
-              <span className="text-brand-brown-dark">
-                {smtp.useCustom ? (
-                  <>
-                    Sending as <span className="font-semibold">{smtp.fromEmail}</span>
-                  </>
-                ) : (
-                  "Sending from PDF Genie's address"
-                )}
-              </span>
-              <button
-                type="button"
-                data-hover="true"
-                onClick={() => setStage("auth")}
-                className="text-xs font-semibold text-brand-blue-deep hover:underline"
-              >
-                Change sending method
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <StepLabel n={2}>Upload recipient list (Excel or CSV, needs an &quot;Email&quot; column)</StepLabel>
-            <a
-              href="/samples/mail-merge-template.xlsx"
-              download
-              className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue-deep hover:underline"
-            >
-              <Download size={14} />
-              Download sample Excel template
-            </a>
-            {!excelFile && (
-              <Dropzone
-                accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-                onFiles={handleExcelFile}
-                label="Drop your recipient list here, or click to browse"
-                hint="Up to 30 recipients and 10MB on the free plan"
-              />
-            )}
-            {parsing && (
-              <p className="flex items-center gap-2 text-sm text-brand-brown-dark/70">
-                <Loader2 size={16} className="animate-spin" />
-                Reading file…
-              </p>
-            )}
-            {excelFile && (
-              <div className="space-y-3">
-                <FileChip name={excelFile.name} size={excelFile.size} onRemove={reset} />
-                {recipients && (
-                  <>
-                    <p className="text-sm text-brand-brown-dark/70">{recipients.length} recipients found</p>
-                    <RecipientPreviewTable recipients={recipients} />
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {recipients && (
             <>
               <div>
-                <StepLabel n={3}>Upload PDF files (optional)</StepLabel>
-                <p className="mb-3 text-xs text-brand-brown-dark/70">
-                  By default, every file you drop here is sent to every recipient. To send a
-                  different file per person instead, add a column named{" "}
-                  <span className="font-mono text-brand-blue-deep">Attachment</span> to your
-                  Excel sheet containing the exact filename to send them (e.g.{" "}
-                  <span className="font-mono">invoice_john.pdf</span>) — then upload all the
-                  files below and Mail Merge will match each recipient to their file.
-                </p>
-                <AttachmentFolderPicker
-                  onFiles={(files) => setAttachments((prev) => [...prev, ...files])}
-                  hint="Up to 30 attachments on the free plan"
-                />
-                {attachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {attachments.map((file, i) => (
-                      <FileChip
-                        key={`${file.name}-${i}`}
-                        name={attachmentLeafName(file)}
-                        size={file.size}
-                        onRemove={() => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
-                      />
-                    ))}
-                  </div>
-                )}
-                {hasAttachmentColumn && (
-                  <p className="mt-3 text-xs text-brand-brown-dark/70">
-                    &quot;Attachment&quot; column detected — attachments will be matched
-                    per recipient instead of sent to everyone.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <StepLabel n={4}>Validation report</StepLabel>
-                <RecipientValidationReport
-                  cleanCount={recipients.length - attachmentIssues.length}
-                  problems={problems}
-                  attachmentIssues={attachmentIssues}
-                  extraFiles={extraFiles}
-                  duplicateFiles={duplicateFiles}
-                  onContinue={handleContinueWithValidOnly}
-                />
-              </div>
-
-              {validationReady && (
-              <>
-              <div>
-                <StepLabel n={5}>Email composer</StepLabel>
-                {columns.length > 0 && (
-                  <p className="mb-3 flex flex-wrap gap-1.5 text-xs text-brand-brown-dark/70">
-                    Merge fields:{" "}
-                    {[...columns, "Current Date"].map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setBody((b) => `${b}{{${c}}}`)}
-                        className="rounded-full bg-brand-blue/10 px-2 py-0.5 font-mono text-brand-blue-deep hover:bg-brand-blue/20"
-                      >
-                        {`{{${c}}}`}
-                      </button>
-                    ))}
-                  </p>
-                )}
-                <input
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Subject — e.g. Promotion Letter - {{Name}}"
-                  className="mb-3 w-full rounded-full border border-brand-brown-dark/15 px-5 py-3 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
-                />
-                <RichTextEditor content={body} onChange={setBody} placeholder="Write your message. Use {{FieldName}} to personalize." />
-
-                <div className="mt-4">
-                  <TemplateLibrary
-                    currentSubject={subject}
-                    currentBody={body}
-                    onApply={(s, b) => {
-                      setSubject(s);
-                      setBody(b);
-                    }}
-                  />
+                <div className="surface-card flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-brown-dark/10 bg-white p-4 text-sm">
+                  <span className="text-brand-brown-dark">
+                    {smtp.useCustom ? (
+                      <>
+                        Sending as <span className="font-semibold">{smtp.fromEmail}</span>
+                      </>
+                    ) : (
+                      "Sending from PDF Genie's address"
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    data-hover="true"
+                    onClick={() => setStage("auth")}
+                    className="text-xs font-semibold text-brand-blue-deep hover:underline"
+                  >
+                    Change sending method
+                  </button>
                 </div>
               </div>
 
-              <div>
-                <StepLabel n={6}>Email preview</StepLabel>
-                <button
-                  type="button"
-                  data-hover="true"
-                  onClick={() => setShowPreview((v) => !v)}
-                  className="mb-3 text-sm font-semibold text-brand-blue-deep hover:underline"
-                >
-                  {showPreview ? "Hide preview" : "Preview personalized emails"}
-                </button>
-                {showPreview && (
-                  <EmailPreview
-                    recipients={recipients}
-                    subjectTemplate={subject}
-                    bodyTemplate={body}
-                    uploadedFilenames={uploadedFilenames}
+              {composeStep === "recipients" && (
+                <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+                  <StepLabel n={1}>Upload recipient list (Excel or CSV, needs an &quot;Email&quot; column)</StepLabel>
+                  <a
+                    href="/samples/mail-merge-template.xlsx"
+                    download
+                    className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue-deep hover:underline"
+                  >
+                    <Download size={14} />
+                    Download sample Excel template
+                  </a>
+                  {!excelFile && (
+                    <Dropzone
+                      accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                      onFiles={handleExcelFile}
+                      label="Drop your recipient list here, or click to browse"
+                      hint="Up to 30 recipients and 10MB on the free plan"
+                    />
+                  )}
+                  {parsing && (
+                    <p className="flex items-center gap-2 text-sm text-brand-brown-dark/70">
+                      <Loader2 size={16} className="animate-spin" />
+                      Reading file…
+                    </p>
+                  )}
+                  {excelFile && (
+                    <div className="space-y-3">
+                      <FileChip name={excelFile.name} size={excelFile.size} onRemove={reset} />
+                      {recipients && (
+                        <>
+                          <p className="text-sm text-brand-brown-dark/70">{recipients.length} recipients found</p>
+                          <RecipientPreviewTable recipients={recipients} />
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {error && <p className="mt-3 text-sm font-medium text-status-danger">{error}</p>}
+
+                  <WizardNav
+                    onCancel={reset}
+                    onNext={() => setComposeStep("attachments")}
+                    nextLabel="Submit"
+                    nextDisabled={!recipients}
                   />
-                )}
-              </div>
+                </div>
+              )}
 
-              {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
+              {composeStep === "attachments" && recipients && (
+                <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+                  <StepLabel n={2}>Upload PDF files (optional)</StepLabel>
+                  <p className="mb-3 text-xs text-brand-brown-dark/70">
+                    By default, every file you drop here is sent to every recipient. To send a
+                    different file per person instead, add a column named{" "}
+                    <span className="font-mono text-brand-blue-deep">Attachment</span> to your
+                    Excel sheet containing the exact filename to send them (e.g.{" "}
+                    <span className="font-mono">invoice_john.pdf</span>) — then upload all the
+                    files below and Mail Merge will match each recipient to their file.
+                  </p>
+                  <AttachmentFolderPicker
+                    onFiles={(files) => setAttachments((prev) => [...prev, ...files])}
+                    hint="Up to 30 attachments on the free plan"
+                  />
+                  {attachments.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {attachments.map((file, i) => (
+                        <FileChip
+                          key={`${file.name}-${i}`}
+                          name={attachmentLeafName(file)}
+                          size={file.size}
+                          onRemove={() => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {hasAttachmentColumn && (
+                    <p className="mt-3 text-xs text-brand-brown-dark/70">
+                      &quot;Attachment&quot; column detected — attachments will be matched
+                      per recipient instead of sent to everyone.
+                    </p>
+                  )}
 
-              <div>
-                <StepLabel n={7}>Send emails</StepLabel>
-                {startedJob ? (
-                  <SendProgress jobId={startedJob.jobId} total={startedJob.recipientCount} />
-                ) : (
-                  <MagneticButton onClick={handleSendClick}>
-                    {`Send to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}`}
-                  </MagneticButton>
-                )}
-              </div>
-              </>
+                  <div className="mt-6">
+                    <RecipientValidationReport
+                      cleanCount={recipients.length - attachmentIssues.length}
+                      problems={problems}
+                      attachmentIssues={attachmentIssues}
+                      extraFiles={extraFiles}
+                      duplicateFiles={duplicateFiles}
+                      onContinue={handleContinueWithValidOnly}
+                    />
+                  </div>
+
+                  <WizardNav
+                    onBack={() => setComposeStep("recipients")}
+                    onCancel={reset}
+                    onNext={() => setComposeStep("composer")}
+                    nextLabel="Submit"
+                    nextDisabled={!validationReady}
+                  />
+                </div>
+              )}
+
+              {composeStep === "composer" && recipients && (
+                <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+                  <StepLabel n={3}>Email composer</StepLabel>
+                  {columns.length > 0 && (
+                    <p className="mb-3 flex flex-wrap gap-1.5 text-xs text-brand-brown-dark/70">
+                      Merge fields:{" "}
+                      {[...columns, "Current Date"].map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setBody((b) => `${b}{{${c}}}`)}
+                          className="rounded-full bg-brand-blue/10 px-2 py-0.5 font-mono text-brand-blue-deep hover:bg-brand-blue/20"
+                        >
+                          {`{{${c}}}`}
+                        </button>
+                      ))}
+                    </p>
+                  )}
+                  <input
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Subject — e.g. Promotion Letter - {{Name}}"
+                    className="mb-3 w-full rounded-full border border-brand-brown-dark/15 px-5 py-3 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
+                  />
+                  <RichTextEditor content={body} onChange={setBody} placeholder="Write your message. Use {{FieldName}} to personalize." />
+
+                  <div className="mt-4">
+                    <TemplateLibrary
+                      currentSubject={subject}
+                      currentBody={body}
+                      onApply={(s, b) => {
+                        setSubject(s);
+                        setBody(b);
+                      }}
+                    />
+                  </div>
+                  {error && <p className="mt-3 text-sm font-medium text-status-danger">{error}</p>}
+
+                  <WizardNav
+                    onBack={() => setComposeStep("attachments")}
+                    onCancel={reset}
+                    onNext={() => {
+                      if (!subject.trim() || !body.trim()) {
+                        setError("Add a subject and message body first.");
+                        return;
+                      }
+                      setError(null);
+                      setComposeStep("preview");
+                    }}
+                    nextLabel="Submit"
+                  />
+                </div>
+              )}
+
+              {composeStep === "preview" && recipients && (
+                <div className="surface-card rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
+                  <StepLabel n={4}>Email preview</StepLabel>
+                  {startedJob ? (
+                    <SendProgress jobId={startedJob.jobId} total={startedJob.recipientCount} />
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        data-hover="true"
+                        onClick={() => setShowPreview((v) => !v)}
+                        className="mb-3 text-sm font-semibold text-brand-blue-deep hover:underline"
+                      >
+                        {showPreview ? "Hide preview" : "Preview personalized emails"}
+                      </button>
+                      {showPreview && (
+                        <EmailPreview
+                          recipients={recipients}
+                          subjectTemplate={subject}
+                          bodyTemplate={body}
+                          uploadedFilenames={uploadedFilenames}
+                        />
+                      )}
+                      {error && <p className="mt-3 text-sm font-medium text-status-danger">{error}</p>}
+
+                      <WizardNav
+                        onBack={() => setComposeStep("composer")}
+                        onCancel={reset}
+                        onNext={handleSendClick}
+                        nextLabel={`Send to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}`}
+                      />
+                    </>
+                  )}
+                </div>
               )}
             </>
-          )}
-          </>
           )}
 
           <p className="mt-6 flex items-start gap-2 text-xs text-brand-brown-dark/70">
