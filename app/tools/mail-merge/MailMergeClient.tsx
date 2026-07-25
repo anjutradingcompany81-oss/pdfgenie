@@ -10,7 +10,8 @@ import { MagneticButton } from "@/components/ui/MagneticButton";
 import { UsageCard } from "@/components/mail-merge/UsageCard";
 import { UpgradeDialog } from "@/components/mail-merge/UpgradeDialog";
 import { RecipientPreviewTable } from "@/components/mail-merge/RecipientPreviewTable";
-import { SmtpConfigForm, EMPTY_SMTP_CONFIG, type SmtpConfigState } from "@/components/mail-merge/SmtpConfigForm";
+import { SendMethodStep } from "@/components/mail-merge/SendMethodStep";
+import { EMPTY_SMTP_CONFIG, type SmtpConfigState } from "@/lib/mail-merge/smtp-providers";
 import { RichTextEditor } from "@/components/mail-merge/RichTextEditor";
 import { TemplateLibrary } from "@/components/mail-merge/TemplateLibrary";
 import { EmailPreview } from "@/components/mail-merge/EmailPreview";
@@ -43,6 +44,7 @@ function StepLabel({ n, children }: { n: number; children: string }) {
 }
 
 export default function MailMergePage() {
+  const [stage, setStage] = useState<"auth" | "compose">("auth");
   const [smtp, setSmtp] = useState<SmtpConfigState>(EMPTY_SMTP_CONFIG);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [recipients, setRecipients] = useState<Recipient[] | null>(null);
@@ -189,9 +191,36 @@ export default function MailMergePage() {
 
       <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
         <div className="space-y-8">
+          {stage === "auth" ? (
+            <SendMethodStep
+              onContinue={(config) => {
+                setSmtp(config);
+                setStage("compose");
+              }}
+            />
+          ) : (
+          <>
           <div>
-            <StepLabel n={1}>SMTP configuration</StepLabel>
-            <SmtpConfigForm value={smtp} onChange={setSmtp} />
+            <StepLabel n={1}>Sending method</StepLabel>
+            <div className="surface-card flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-brown-dark/10 bg-white p-4 text-sm">
+              <span className="text-brand-brown-dark">
+                {smtp.useCustom ? (
+                  <>
+                    Sending as <span className="font-semibold">{smtp.fromEmail}</span>
+                  </>
+                ) : (
+                  "Sending from PDF Genie's address"
+                )}
+              </span>
+              <button
+                type="button"
+                data-hover="true"
+                onClick={() => setStage("auth")}
+                className="text-xs font-semibold text-brand-blue-deep hover:underline"
+              >
+                Change sending method
+              </button>
+            </div>
           </div>
 
           <div>
@@ -388,6 +417,8 @@ export default function MailMergePage() {
               </>
               )}
             </>
+          )}
+          </>
           )}
 
           <p className="mt-6 flex items-start gap-2 text-xs text-brand-brown-dark/70">

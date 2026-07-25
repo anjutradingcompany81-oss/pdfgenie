@@ -1,28 +1,9 @@
 import { NextResponse } from "next/server";
 import { parseRecipientsFile } from "@/lib/mail-merge/parse-recipients";
-import { validateAndSend, type TransientSmtpConfig } from "@/lib/mail-merge/send-job";
+import { validateAndSend } from "@/lib/mail-merge/send-job";
+import { parseSmtpConfig } from "@/lib/mail-merge/parse-smtp-config";
 import { resolveIdentity } from "@/lib/mail-merge/resolve-identity";
 import { isRateLimited, recordFailedAttempt } from "@/lib/rate-limit";
-
-function parseSmtpConfig(raw: FormDataEntryValue | null): TransientSmtpConfig | undefined {
-  if (typeof raw !== "string" || !raw) return undefined;
-  try {
-    const data = JSON.parse(raw);
-    if (!data?.useCustom) return undefined;
-    if (!data.host || !data.user || !data.password || !data.fromEmail) return undefined;
-    return {
-      host: String(data.host),
-      port: Number(data.port) || 587,
-      secure: Boolean(data.secure),
-      user: String(data.user),
-      password: String(data.password),
-      fromEmail: String(data.fromEmail),
-      fromName: data.fromName ? String(data.fromName) : undefined,
-    };
-  } catch {
-    return undefined;
-  }
-}
 
 export async function POST(request: Request) {
   const { userId, identifier, plan } = await resolveIdentity();

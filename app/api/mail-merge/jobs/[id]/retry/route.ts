@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getJobIfAccessible } from "@/lib/mail-merge/job-access";
 import { retryFailedRecipients } from "@/lib/mail-merge/retry";
-import type { TransientSmtpConfig } from "@/lib/mail-merge/send-job";
-
-function parseSmtpConfig(raw: FormDataEntryValue | null): TransientSmtpConfig | undefined {
-  if (typeof raw !== "string" || !raw) return undefined;
-  try {
-    const data = JSON.parse(raw);
-    if (!data?.useCustom) return undefined;
-    if (!data.host || !data.user || !data.password || !data.fromEmail) return undefined;
-    return {
-      host: String(data.host),
-      port: Number(data.port) || 587,
-      secure: Boolean(data.secure),
-      user: String(data.user),
-      password: String(data.password),
-      fromEmail: String(data.fromEmail),
-      fromName: data.fromName ? String(data.fromName) : undefined,
-    };
-  } catch {
-    return undefined;
-  }
-}
+import { parseSmtpConfig } from "@/lib/mail-merge/parse-smtp-config";
 
 export async function POST(
   request: NextRequest,
