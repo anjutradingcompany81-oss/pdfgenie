@@ -25,10 +25,16 @@ export async function GET(request: NextRequest) {
       disabled: true,
       createdAt: true,
       image: true,
+      subscription: { select: { status: true, plan: { select: { key: true } } } },
     },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
 
-  return NextResponse.json({ users });
+  const withPlan = users.map(({ subscription, ...user }) => ({
+    ...user,
+    plan: subscription?.status === "ACTIVE" ? subscription.plan.key : "FREE",
+  }));
+
+  return NextResponse.json({ users: withPlan });
 }

@@ -2,6 +2,9 @@
 
 import { Ban, CheckCircle2, KeyRound, Loader2, Search, ShieldCheck, Trash2, User } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { PLAN_DISPLAY, type PlanKey } from "@/lib/plans/config";
+
+const PLAN_OPTIONS: PlanKey[] = ["FREE", "PREMIUM", "ENTERPRISE"];
 
 type AdminUser = {
   id: string;
@@ -11,6 +14,7 @@ type AdminUser = {
   disabled: boolean;
   createdAt: string;
   image: string | null;
+  plan: PlanKey;
 };
 
 export default function AdminUsersPage() {
@@ -63,6 +67,20 @@ export default function AdminUsersPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: user.role === "ADMIN" ? "USER" : "ADMIN" }),
+      });
+      await loadUsers(search);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function changePlan(user: AdminUser, planKey: PlanKey) {
+    setBusyId(user.id);
+    try {
+      await fetch(`/api/admin-dashboard/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planKey }),
       });
       await loadUsers(search);
     } finally {
@@ -135,6 +153,7 @@ export default function AdminUsersPage() {
               <tr className="border-b border-brand-brown-dark/10 text-xs uppercase tracking-wide text-brand-brown-dark/70">
                 <th className="px-5 py-3">User</th>
                 <th className="px-5 py-3">Role</th>
+                <th className="px-5 py-3">Plan</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3">Joined</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -174,6 +193,24 @@ export default function AdminUsersPage() {
                       <ShieldCheck size={12} />
                       {user.role}
                     </button>
+                  </td>
+                  <td className="px-5 py-4">
+                    <select
+                      value={user.plan}
+                      disabled={busyId === user.id}
+                      onChange={(e) => changePlan(user, e.target.value as PlanKey)}
+                      className={`rounded-full border-0 px-3 py-1 text-xs font-semibold outline-none ${
+                        user.plan === "FREE"
+                          ? "bg-brand-brown-dark/5 text-brand-brown-dark/70"
+                          : "bg-brand-blue/10 text-brand-blue-deep"
+                      }`}
+                    >
+                      {PLAN_OPTIONS.map((key) => (
+                        <option key={key} value={key}>
+                          {PLAN_DISPLAY[key].name}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-5 py-4">
                     <span
