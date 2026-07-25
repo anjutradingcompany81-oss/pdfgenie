@@ -50,9 +50,14 @@ const APP_PASSWORD_HINTS: { hostIncludes: string; messagePattern: RegExp; hint: 
     hint: "Gmail no longer accepts your regular password for SMTP. Turn on 2-Step Verification, then generate an App Password at myaccount.google.com/apppasswords and use that instead.",
   },
   {
+    hostIncludes: "smtp-mail.outlook.com",
+    messagePattern: /Authentication unsuccessful|5\.7\.3|5\.7\.57/i,
+    hint: "Outlook.com/Hotmail no longer accepts your regular password for SMTP. Turn on 2-step verification, then generate an app password at account.live.com/proofs/AppPassword and use that instead.",
+  },
+  {
     hostIncludes: "office365.com",
-    messagePattern: /5\.7\.139|basic auth|BasicAuth/i,
-    hint: "Outlook/Microsoft 365 has disabled regular-password SMTP login for most accounts. Generate an app password in your Microsoft account's security settings and use that instead.",
+    messagePattern: /5\.7\.139|basic auth|BasicAuth|SmtpClientAuthentication/i,
+    hint: "This Microsoft 365 (work/school) account has Basic Authentication disabled for SMTP — Microsoft retired regular-password SMTP login for these accounts. Ask your admin to enable SMTP AUTH for this mailbox, or use a personal outlook.com/hotmail.com account instead, which supports an app password.",
   },
   {
     hostIncludes: "yahoo.com",

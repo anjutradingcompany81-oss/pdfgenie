@@ -102,12 +102,15 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
           className="rounded-xl border border-brand-brown-dark/10 bg-brand-cream/40 p-4 opacity-60"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-brand-brown-dark">Login using Outlook</span>
+            <span className="text-sm font-bold text-brand-brown-dark">Sign in with Microsoft</span>
             <span className="rounded-full bg-brand-brown-dark/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-brown-dark/70">
               Coming soon
             </span>
           </div>
-          <p className="mt-1 text-xs text-brand-brown-dark/70">Microsoft Graph sign-in, without a password.</p>
+          <p className="mt-1 text-xs text-brand-brown-dark/70">
+            One-click Microsoft login, no password needed. Meanwhile, Outlook/Hotmail already works with an
+            app password via Email (SMTP) on the left.
+          </p>
         </div>
       </div>
 
@@ -141,6 +144,19 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
         {detected && (
           <p className="text-xs font-medium text-status-success">
             Detected {detected.label} — using {detected.host}:{detected.port}.
+          </p>
+        )}
+        {detected?.label === "Gmail" && (
+          <p className="text-xs text-brand-brown-dark/70">
+            Gmail needs an app password, not your regular password — generate one at{" "}
+            <span className="font-mono">myaccount.google.com/apppasswords</span>.
+          </p>
+        )}
+        {detected?.label === "Outlook" && (
+          <p className="text-xs text-brand-brown-dark/70">
+            Outlook.com/Hotmail needs an app password, not your regular password — generate one at{" "}
+            <span className="font-mono">account.live.com/proofs/AppPassword</span>. Using a work/school
+            (Microsoft 365) address instead? SMTP AUTH must be enabled for that mailbox by an admin first.
           </p>
         )}
         {unrecognized && (

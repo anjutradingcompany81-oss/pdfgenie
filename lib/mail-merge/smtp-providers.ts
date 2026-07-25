@@ -27,10 +27,12 @@ export type ProviderPreset = { host: string; port: string; secure: boolean; labe
 export const PROVIDER_PRESETS: Record<string, ProviderPreset> = {
   "gmail.com": { host: "smtp.gmail.com", port: "587", secure: false, label: "Gmail" },
   "googlemail.com": { host: "smtp.gmail.com", port: "587", secure: false, label: "Gmail" },
-  "outlook.com": { host: "smtp.office365.com", port: "587", secure: false, label: "Outlook" },
-  "hotmail.com": { host: "smtp.office365.com", port: "587", secure: false, label: "Outlook" },
-  "live.com": { host: "smtp.office365.com", port: "587", secure: false, label: "Outlook" },
-  "msn.com": { host: "smtp.office365.com", port: "587", secure: false, label: "Outlook" },
+  // smtp.office365.com is the Microsoft 365 (work/school) relay — personal
+  // outlook.com/hotmail.com/live.com/msn.com accounts use a different one.
+  "outlook.com": { host: "smtp-mail.outlook.com", port: "587", secure: false, label: "Outlook" },
+  "hotmail.com": { host: "smtp-mail.outlook.com", port: "587", secure: false, label: "Outlook" },
+  "live.com": { host: "smtp-mail.outlook.com", port: "587", secure: false, label: "Outlook" },
+  "msn.com": { host: "smtp-mail.outlook.com", port: "587", secure: false, label: "Outlook" },
   "yahoo.com": { host: "smtp.mail.yahoo.com", port: "465", secure: true, label: "Yahoo Mail" },
   "ymail.com": { host: "smtp.mail.yahoo.com", port: "465", secure: true, label: "Yahoo Mail" },
   "icloud.com": { host: "smtp.mail.me.com", port: "587", secure: false, label: "iCloud Mail" },
