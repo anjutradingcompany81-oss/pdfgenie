@@ -17,6 +17,8 @@ import { TemplateLibrary } from "@/components/mail-merge/TemplateLibrary";
 import { EmailPreview } from "@/components/mail-merge/EmailPreview";
 import { AttachmentFolderPicker, attachmentLeafName } from "@/components/mail-merge/AttachmentFolderPicker";
 import { RecipientValidationReport } from "@/components/mail-merge/RecipientValidationReport";
+import { ConfirmSendDialog } from "@/components/mail-merge/ConfirmSendDialog";
+import { SendProgress } from "@/components/mail-merge/SendProgress";
 import { resolveRecipientAttachmentNames, findExtraAndDuplicateFiles } from "@/lib/mail-merge/resolve-attachments";
 import type { RowProblem } from "@/lib/mail-merge/parse-recipients";
 
@@ -56,11 +58,10 @@ export default function MailMergePage() {
   const [showPreview, setShowPreview] = useState(false);
 
   const [parsing, setParsing] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ jobId: string; sent: number; failed: number; smtpConfigured: boolean } | null>(
-    null
-  );
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [startedJob, setStartedJob] = useState<{ jobId: string; recipientCount: number } | null>(null);
 
   const [usageRefreshKey, setUsageRefreshKey] = useState(0);
   const [upgrade, setUpgrade] = useState<{ open: boolean; message?: string }>({ open: false });
@@ -86,7 +87,7 @@ export default function MailMergePage() {
     const file = files[0];
     if (!file) return;
     setError(null);
-    setResult(null);
+    setStartedJob(null);
     setRecipients(null);
     setProblems([]);
     setShowPreview(false);
@@ -122,7 +123,7 @@ export default function MailMergePage() {
     setColumns([]);
     setAttachments([]);
     setError(null);
-    setResult(null);
+    setStartedJob(null);
     setShowPreview(false);
   }
 
@@ -132,7 +133,7 @@ export default function MailMergePage() {
     setRecipients(recipients.filter((r) => !issueEmails.has(r.email)));
   }
 
-  async function handleSend() {
+  function handleSendClick() {
     if (!excelFile || !recipients) return;
     if (!subject.trim() || !body.trim()) {
       setError("Add a subject and message body first.");
@@ -142,9 +143,14 @@ export default function MailMergePage() {
       setError("Fill in your SMTP host, username, password, and from-email, or uncheck custom SMTP.");
       return;
     }
-    setSending(true);
     setError(null);
-    setResult(null);
+    setConfirmOpen(true);
+  }
+
+  async function handleConfirmSend() {
+    if (!excelFile || !recipients) return;
+    setStarting(true);
+    setError(null);
     try {
       const formData = new FormData();
       formData.append("excel", excelFile);
@@ -157,18 +163,20 @@ export default function MailMergePage() {
       const data = await res.json();
 
       if (!res.ok) {
+        setConfirmOpen(false);
         if (data.limitReached) {
           setUpgrade({ open: true, message: data.error });
         } else {
-          setError(data.error || "Something went wrong sending that campaign.");
+          setError(data.error || "Something went wrong starting that campaign.");
         }
         return;
       }
 
-      setResult(data);
+      setConfirmOpen(false);
+      setStartedJob({ jobId: data.jobId, recipientCount: data.recipientCount });
       setUsageRefreshKey((k) => k + 1);
     } finally {
-      setSending(false);
+      setStarting(false);
     }
   }
 
@@ -371,49 +379,14 @@ export default function MailMergePage() {
 
               <div>
                 <StepLabel n={7}>Send emails</StepLabel>
-                <MagneticButton onClick={handleSend} disabled={sending}>
-                  {sending ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Sending…
-                    </>
-                  ) : (
-                    `Send to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}`
-                  )}
-                </MagneticButton>
+                {startedJob ? (
+                  <SendProgress jobId={startedJob.jobId} total={startedJob.recipientCount} />
+                ) : (
+                  <MagneticButton onClick={handleSendClick}>
+                    {`Send to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}`}
+                  </MagneticButton>
+                )}
               </div>
-
-              {result && (
-                <div>
-                  <StepLabel n={8}>Reports & logs</StepLabel>
-                  <div className="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4 text-sm text-brand-brown-dark">
-                    <p className="font-semibold">
-                      {result.sent} sent, {result.failed} failed.
-                    </p>
-                    {!result.smtpConfigured && (
-                      <p className="mt-1 text-brand-brown-dark/70">
-                        Note: email sending isn&apos;t configured on this server yet, so recipients were
-                        processed and counted against your quota but no email actually went out.
-                      </p>
-                    )}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Link
-                        href={`/tools/mail-merge/history/${result.jobId}`}
-                        className="flex items-center gap-1.5 rounded-full bg-brand-blue-deep px-4 py-2 text-xs font-semibold text-white"
-                      >
-                        View delivery dashboard
-                      </Link>
-                      <a
-                        href={`/api/mail-merge/jobs/${result.jobId}/log?format=xlsx`}
-                        className="flex items-center gap-1.5 rounded-full border border-brand-brown-dark/15 px-4 py-2 text-xs font-semibold text-brand-brown-dark"
-                      >
-                        <Download size={13} />
-                        Download log
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              )}
               </>
               )}
             </>
@@ -464,6 +437,14 @@ export default function MailMergePage() {
         open={upgrade.open}
         message={upgrade.message}
         onClose={() => setUpgrade({ open: false })}
+      />
+
+      <ConfirmSendDialog
+        open={confirmOpen}
+        recipientCount={recipients?.length ?? 0}
+        starting={starting}
+        onConfirm={handleConfirmSend}
+        onClose={() => setConfirmOpen(false)}
       />
     </ToolShell>
   );

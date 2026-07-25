@@ -1,10 +1,9 @@
-import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/db";
-import { getTransport as getDefaultTransport, getFromAddress } from "@/lib/email";
-import { renderTemplate, findField } from "@/lib/mail-merge/render-template";
-import { resolveRecipientAttachmentNames } from "@/lib/mail-merge/resolve-attachments";
+import { getTransport as getDefaultTransport } from "@/lib/email";
+import { findField } from "@/lib/mail-merge/render-template";
 import { recordUsage, getUsageToday, type UsageIdentifier } from "@/lib/usage-tracking";
 import { PLAN_LIMITS, type PlanKey } from "@/lib/plans/config";
+import { registerJob } from "@/lib/mail-merge/job-registry";
 import type { Recipient } from "@/lib/mail-merge/parse-recipients";
 
 export type MailMergeAttachment = { filename: string; content: Buffer };
@@ -12,10 +11,9 @@ export type MailMergeAttachment = { filename: string; content: Buffer };
 /**
  * Entered fresh on the Mail Merge page for this one job — see
  * lib/security-notes.md-style comment below. Never written to the
- * database, never logged. Held only for the lifetime of this function
- * call; once validateAndSend() returns, nothing in this process still
- * references it and it's eligible for garbage collection like any other
- * local variable.
+ * database, never logged. Held only in the in-memory job registry for the
+ * lifetime of this job's send, then discarded (evicted on completion or
+ * idle timeout — see lib/mail-merge/job-registry.ts).
  */
 export type TransientSmtpConfig = {
   host: string;
@@ -40,25 +38,18 @@ export type SendJobInput = {
 };
 
 export type SendJobResult =
-  | { ok: true; jobId: string; sent: number; failed: number; smtpConfigured: boolean }
+  | { ok: true; jobId: string; recipientCount: number; smtpConfigured: boolean }
   | { ok: false; reason: string };
 
-function buildTransport(config?: TransientSmtpConfig): { transport: Transporter | null; from: string } {
-  if (config) {
-    return {
-      transport: nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: { user: config.user, pass: config.password },
-      }),
-      from: config.fromName ? `${config.fromName} <${config.fromEmail}>` : config.fromEmail,
-    };
-  }
-  return { transport: getDefaultTransport(), from: getFromAddress() };
-}
-
-export async function validateAndSend(input: SendJobInput): Promise<SendJobResult> {
+/**
+ * Validates plan limits, creates the job + PENDING recipient rows, and
+ * registers the attachments/SMTP config in the in-memory job registry for
+ * the batch-send endpoint to pick up. Does not send anything itself —
+ * sending happens in bounded concurrent batches via POST
+ * /api/mail-merge/jobs/[id]/batch, driven by the client's SendProgress
+ * poll loop.
+ */
+export async function startSendJob(input: SendJobInput): Promise<SendJobResult> {
   const limits = PLAN_LIMITS[input.plan];
 
   if (limits.maxEmailsPerJob !== -1 && input.recipients.length > limits.maxEmailsPerJob) {
@@ -129,80 +120,11 @@ export async function validateAndSend(input: SendJobInput): Promise<SendJobResul
         })),
       },
     },
-    include: { recipients: true },
   });
 
-  const { transport, from } = buildTransport(input.smtpConfig);
-  const attachmentByName = new Map(input.attachments.map((a) => [a.filename, a]));
-  const uploadedFilenames = input.attachments.map((a) => a.filename);
-  let sent = 0;
-  let failed = 0;
-
-  for (const recipientRow of job.recipients) {
-    const recipient = input.recipients.find((r) => r.email === recipientRow.email);
-    if (!recipient) continue;
-
-    const subject = renderTemplate(input.subjectTemplate, recipient.fields);
-    const html = renderTemplate(input.bodyTemplate, recipient.fields, { escapeHtml: true });
-    const cc = findField(recipient.fields, "cc") || undefined;
-    const bcc = findField(recipient.fields, "bcc") || undefined;
-
-    const { matched, missing } = resolveRecipientAttachmentNames(recipient.fields, uploadedFilenames);
-    const attachmentNames = matched.length > 0 ? matched.join(", ") : null;
-
-    if (missing.length > 0) {
-      await prisma.mailMergeRecipient.update({
-        where: { id: recipientRow.id },
-        data: {
-          status: "FAILED",
-          error: `Attachment not found among uploaded files: ${missing.join(", ")}`,
-          attachmentNames,
-        },
-      });
-      failed++;
-      continue;
-    }
-
-    try {
-      let smtpResponse: string | null = null;
-      if (transport) {
-        const info = await transport.sendMail({
-          from,
-          to: recipient.email,
-          cc,
-          bcc,
-          subject,
-          html,
-          attachments: matched.map((name) => {
-            const a = attachmentByName.get(name)!;
-            return { filename: a.filename, content: a.content };
-          }),
-        });
-        smtpResponse = info.response ?? null;
-      }
-      // If SMTP isn't configured, we still record the recipient as
-      // processed (not silently "sent") — see the job's smtpConfigured
-      // flag, surfaced to the caller so the UI can be honest about it.
-      await prisma.mailMergeRecipient.update({
-        where: { id: recipientRow.id },
-        data: { status: "SENT", sentAt: new Date(), smtpResponse, attachmentNames },
-      });
-      sent++;
-    } catch (err) {
-      await prisma.mailMergeRecipient.update({
-        where: { id: recipientRow.id },
-        data: { status: "FAILED", error: err instanceof Error ? err.message : "Unknown error", attachmentNames },
-      });
-      failed++;
-    }
-  }
-
-  await prisma.mailMergeJob.update({
-    where: { id: job.id },
-    data: { status: failed === job.recipients.length ? "FAILED" : "COMPLETED", completedAt: new Date() },
-  });
-
+  registerJob(job.id, input.attachments, input.smtpConfig);
   await recordUsage(input.identifier, input.recipients.length);
 
-  return { ok: true, jobId: job.id, sent, failed, smtpConfigured: transport !== null };
+  const smtpConfigured = Boolean(input.smtpConfig) || getDefaultTransport() !== null;
+  return { ok: true, jobId: job.id, recipientCount: input.recipients.length, smtpConfigured };
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseRecipientsFile } from "@/lib/mail-merge/parse-recipients";
-import { validateAndSend } from "@/lib/mail-merge/send-job";
+import { startSendJob } from "@/lib/mail-merge/send-job";
 import { parseSmtpConfig } from "@/lib/mail-merge/parse-smtp-config";
 import { resolveIdentity } from "@/lib/mail-merge/resolve-identity";
 import { isRateLimited, recordFailedAttempt } from "@/lib/rate-limit";
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     }))
   );
 
-  const result = await validateAndSend({
+  const result = await startSendJob({
     identifier,
     userId,
     plan,

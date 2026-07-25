@@ -28,6 +28,12 @@ export async function POST(
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  if ("blocked" in result) {
+    return NextResponse.json(
+      { error: "This job is still actively sending — wait for it to finish or pause it first." },
+      { status: 409 }
+    );
+  }
 
   return NextResponse.json({ ok: true, ...result });
 }

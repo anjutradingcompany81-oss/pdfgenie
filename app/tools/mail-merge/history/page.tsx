@@ -21,6 +21,8 @@ const STATUS_COLORS: Record<string, string> = {
   SENDING: "bg-status-warning/10 text-status-warning",
   PENDING: "bg-brand-brown-dark/5 text-brand-brown-dark/70",
   BLOCKED: "bg-status-danger/10 text-status-danger",
+  PAUSED: "bg-status-warning/10 text-status-warning",
+  CANCELLED: "bg-brand-brown-dark/5 text-brand-brown-dark/70",
 };
 
 export default function MailMergeHistoryPage() {
@@ -74,6 +76,8 @@ export default function MailMergeHistoryPage() {
             <option value="COMPLETED">Completed</option>
             <option value="FAILED">Failed</option>
             <option value="SENDING">Sending</option>
+            <option value="PAUSED">Paused</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
         <div>

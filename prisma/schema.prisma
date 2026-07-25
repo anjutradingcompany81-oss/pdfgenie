@@ -248,6 +248,8 @@ enum MailMergeJobStatus {
   COMPLETED
   FAILED
   BLOCKED
+  PAUSED
+  CANCELLED
 }
 
 model MailMergeJob {
@@ -281,6 +283,7 @@ enum MailMergeRecipientStatus {
   PENDING
   SENT
   FAILED
+  CANCELLED
 }
 
 model MailMergeRecipient {
@@ -303,6 +306,10 @@ model MailMergeRecipient {
   // retry without the original file.
   fields       Json?
   sentAt       DateTime?
+  // Captured when send-recipient.ts sends successfully — the provider's
+  // message-id and how long the SMTP call took, surfaced in the log export.
+  messageId    String?
+  durationMs   Int?
 
   job MailMergeJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 

@@ -1,8 +1,8 @@
-﻿import { CheckCircle2, Clock, Mail, TrendingUp, XCircle } from "lucide-react";
+﻿import { Ban, CheckCircle2, Clock, Mail, TrendingUp, XCircle } from "lucide-react";
 import { StatCard } from "@/components/admin-dashboard/StatCard";
 
 export type RecipientLike = {
-  status: "PENDING" | "SENT" | "FAILED";
+  status: "PENDING" | "SENT" | "FAILED" | "CANCELLED";
   sentAt: Date | string | null;
   fields: Record<string, string> | null;
 };
@@ -54,6 +54,7 @@ export function DeliveryDashboard({
   const sent = recipients.filter((r) => r.status === "SENT").length;
   const failed = recipients.filter((r) => r.status === "FAILED").length;
   const pending = recipients.filter((r) => r.status === "PENDING").length;
+  const cancelled = recipients.filter((r) => r.status === "CANCELLED").length;
   const successRate = total > 0 ? Math.round((sent / total) * 100) : 0;
 
   const start = new Date(createdAt);
@@ -86,6 +87,7 @@ export function DeliveryDashboard({
         <StatCard icon={CheckCircle2} label="Successfully sent" value={String(sent)} />
         <StatCard icon={XCircle} label="Failed" value={String(failed)} />
         <StatCard icon={Clock} label="Pending" value={String(pending)} />
+        {cancelled > 0 && <StatCard icon={Ban} label="Cancelled" value={String(cancelled)} />}
         <StatCard icon={TrendingUp} label="Success rate" value={`${successRate}%`} />
         <StatCard icon={Clock} label="Duration" value={durationSec !== null ? `${durationSec}s` : "In progress"} />
       </div>
@@ -97,6 +99,9 @@ export function DeliveryDashboard({
             <BarRow label="Sent" value={sent} max={total} colorClass="bg-status-success" />
             <BarRow label="Failed" value={failed} max={total} colorClass="bg-status-danger" />
             <BarRow label="Pending" value={pending} max={total} colorClass="bg-status-warning" />
+            {cancelled > 0 && (
+              <BarRow label="Cancelled" value={cancelled} max={total} colorClass="bg-brand-brown-dark/40" />
+            )}
           </div>
         </div>
 
