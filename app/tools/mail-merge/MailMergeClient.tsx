@@ -13,7 +13,7 @@ import {
   Paperclip,
   PenLine,
   Eye,
-  UploadCloud,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -23,7 +23,6 @@ import { FileChip } from "@/components/tools/FileChip";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { UsageCard } from "@/components/mail-merge/UsageCard";
 import { UpgradeDialog } from "@/components/mail-merge/UpgradeDialog";
-import { UploadDialog } from "@/components/mail-merge/UploadDialog";
 import { RecipientPreviewTable } from "@/components/mail-merge/RecipientPreviewTable";
 import { SendMethodStep } from "@/components/mail-merge/SendMethodStep";
 import { EMPTY_SMTP_CONFIG, type SmtpConfigState } from "@/lib/mail-merge/smtp-providers";
@@ -69,43 +68,6 @@ function StepHeading({ step, title, description }: { step: WizardStepId; title: 
         {description && <p className="mt-1.5 text-sm leading-relaxed text-brand-brown-dark/65">{description}</p>}
       </div>
     </div>
-  );
-}
-
-/**
- * Compact row trigger that opens an UploadDialog. Deliberately does NOT look
- * like a dropzone itself (no dashed border, no big empty box) — the actual
- * drop target lives inside the modal. Making this look like a second
- * dropzone reads as two redundant, competing upload areas stacked on the
- * page instead of one clear "open the upload dialog" action.
- */
-function UploadTrigger({
-  onClick,
-  label,
-  hint,
-}: {
-  onClick: () => void;
-  label: string;
-  hint: string;
-}) {
-  return (
-    <button
-      type="button"
-      data-hover="true"
-      onClick={onClick}
-      className="group flex w-full items-center gap-4 rounded-2xl border border-brand-brown-dark/15 bg-white p-5 text-left transition-colors hover:border-brand-blue/40 hover:bg-brand-blue/5"
-    >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-blue-deep to-brand-blue text-white shadow-sm shadow-brand-blue/20 transition-transform group-hover:scale-105">
-        <UploadCloud size={20} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-brand-brown-dark">{label}</p>
-        <p className="mt-0.5 text-xs text-brand-brown-dark/60">{hint}</p>
-      </div>
-      <span className="shrink-0 rounded-full bg-brand-blue-deep px-4 py-2 text-xs font-semibold text-white transition-colors group-hover:bg-brand-blue">
-        Upload
-      </span>
-    </button>
   );
 }
 
@@ -178,8 +140,6 @@ export default function MailMergePage() {
 
   const [usageRefreshKey, setUsageRefreshKey] = useState(0);
   const [upgrade, setUpgrade] = useState<{ open: boolean; message?: string }>({ open: false });
-  const [excelModalOpen, setExcelModalOpen] = useState(false);
-  const [attachmentsModalOpen, setAttachmentsModalOpen] = useState(false);
 
   // Jumping between wizard steps should always land the user at the top of
   // the new step's content, not wherever they happened to be scrolled to.
@@ -207,7 +167,6 @@ export default function MailMergePage() {
   async function handleExcelFile(files: File[]) {
     const file = files[0];
     if (!file) return;
-    setExcelModalOpen(false);
     setError(null);
     setStartedJob(null);
     setRecipients(null);
@@ -259,11 +218,6 @@ export default function MailMergePage() {
   function handleCancelToAuth() {
     reset();
     setStage("auth");
-  }
-
-  function handleAttachmentFiles(files: File[]) {
-    setAttachments((prev) => [...prev, ...files]);
-    setAttachmentsModalOpen(false);
   }
 
   function handleContinueWithValidOnly() {
@@ -381,7 +335,20 @@ export default function MailMergePage() {
       ) : (
         <div className="mx-auto w-full max-w-3xl">
           <div className="surface-card rounded-3xl border border-brand-brown-dark/10 bg-white p-6 sm:p-10">
-            <WizardStepper current={composeStep} />
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <WizardStepper current={composeStep} />
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelToAuth}
+                aria-label="Cancel Mail Merge"
+                title="Cancel Mail Merge"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-brand-brown-dark/50 transition-colors hover:bg-status-danger/10 hover:text-status-danger"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
             <div className="mt-7 flex flex-wrap items-center justify-between gap-2 border-b border-brand-brown-dark/10 pb-7 text-sm">
               <span className="text-brand-brown-dark/80">
@@ -420,20 +387,13 @@ export default function MailMergePage() {
                     Download sample Excel template
                   </a>
                   {!excelFile && (
-                    <UploadTrigger
-                      onClick={() => setExcelModalOpen(true)}
-                      label="Upload recipient list"
-                      hint="Excel or CSV — up to 30 recipients, 10MB on the free plan"
-                    />
-                  )}
-                  <UploadDialog open={excelModalOpen} title="Upload recipient list" onClose={() => setExcelModalOpen(false)}>
                     <Dropzone
                       accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
                       onFiles={handleExcelFile}
                       label="Drop your recipient list here, or click to browse"
                       hint="Up to 30 recipients and 10MB on the free plan"
                     />
-                  </UploadDialog>
+                  )}
                   {parsing && (
                     <p className="flex items-center gap-2 text-sm text-brand-brown-dark/70">
                       <Loader2 size={16} className="animate-spin" />
@@ -470,14 +430,10 @@ export default function MailMergePage() {
                       'Optional. By default, every file you drop here goes to every recipient. To send a different file per person, add a column named "Attachment" to your Excel sheet with the exact filename to send them (e.g. invoice_john.pdf), then upload all the files below.'
                     }
                   />
-                  <UploadTrigger
-                    onClick={() => setAttachmentsModalOpen(true)}
-                    label={attachments.length > 0 ? "Add more PDF files" : "Attach PDF files"}
-                    hint="Up to 30 attachments on the free plan — or select a whole folder"
+                  <AttachmentFolderPicker
+                    onFiles={(files) => setAttachments((prev) => [...prev, ...files])}
+                    hint="Up to 30 attachments on the free plan"
                   />
-                  <UploadDialog open={attachmentsModalOpen} title="Attach PDF files" onClose={() => setAttachmentsModalOpen(false)}>
-                    <AttachmentFolderPicker onFiles={handleAttachmentFiles} hint="Up to 30 attachments on the free plan" />
-                  </UploadDialog>
                   {attachments.length > 0 && (
                     <div className="mt-4 space-y-2">
                       {attachments.map((file, i) => (
