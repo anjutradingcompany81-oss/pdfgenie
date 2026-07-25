@@ -5,8 +5,18 @@ export type Recipient = {
   fields: Record<string, string>;
 };
 
+export type RowProblemType = "INVALID_EMAIL" | "MISSING_EMAIL" | "DUPLICATE_EMAIL";
+
+export type RowProblem = {
+  row: number;
+  raw: Record<string, string>;
+  type: RowProblemType;
+  message: string;
+};
+
 export type ParsedRecipients = {
-  recipients: Recipient[];
+  valid: Recipient[];
+  problems: RowProblem[];
   columns: string[];
 };
 
@@ -31,24 +41,44 @@ export function parseRecipientsFile(buffer: ArrayBuffer): ParsedRecipients {
     throw new Error('No "Email" column found. Add a column named "Email" with each recipient\'s address.');
   }
 
-  const recipients: Recipient[] = [];
-  for (const row of rows) {
-    const email = String(row[emailColumn] ?? "").trim();
-    if (!email) continue;
-    if (!EMAIL_REGEX.test(email)) {
-      throw new Error(`"${email}" doesn't look like a valid email address.`);
-    }
+  const valid: Recipient[] = [];
+  const problems: RowProblem[] = [];
+  const seenEmails = new Set<string>();
 
+  rows.forEach((row, index) => {
+    // Header is row 1, data starts at row 2 in the source Excel file.
+    const rowNumber = index + 2;
     const fields: Record<string, string> = {};
     for (const col of columns) {
       fields[col] = String(row[col] ?? "");
     }
-    recipients.push({ email, fields });
-  }
 
-  if (recipients.length === 0) {
+    const email = String(row[emailColumn] ?? "").trim();
+    if (!email) {
+      problems.push({ row: rowNumber, raw: fields, type: "MISSING_EMAIL", message: "No email address in this row." });
+      return;
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      problems.push({
+        row: rowNumber,
+        raw: fields,
+        type: "INVALID_EMAIL",
+        message: `"${email}" doesn't look like a valid email address.`,
+      });
+      return;
+    }
+    const key = email.toLowerCase();
+    if (seenEmails.has(key)) {
+      problems.push({ row: rowNumber, raw: fields, type: "DUPLICATE_EMAIL", message: `"${email}" appears more than once.` });
+      return;
+    }
+    seenEmails.add(key);
+    valid.push({ email, fields });
+  });
+
+  if (valid.length === 0) {
     throw new Error("No valid recipient rows found.");
   }
 
-  return { recipients, columns };
+  return { valid, problems, columns };
 }

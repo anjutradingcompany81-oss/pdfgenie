@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   let recipients;
   try {
     const buffer = await excelFile.arrayBuffer();
-    ({ recipients } = parseRecipientsFile(buffer));
+    ({ valid: recipients } = parseRecipientsFile(buffer));
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Couldn't read that file." },

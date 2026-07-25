@@ -14,7 +14,10 @@ import { SmtpConfigForm, EMPTY_SMTP_CONFIG, type SmtpConfigState } from "@/compo
 import { RichTextEditor } from "@/components/mail-merge/RichTextEditor";
 import { TemplateLibrary } from "@/components/mail-merge/TemplateLibrary";
 import { EmailPreview } from "@/components/mail-merge/EmailPreview";
-import { resolveRecipientAttachmentNames } from "@/lib/mail-merge/resolve-attachments";
+import { AttachmentFolderPicker, attachmentLeafName } from "@/components/mail-merge/AttachmentFolderPicker";
+import { RecipientValidationReport } from "@/components/mail-merge/RecipientValidationReport";
+import { resolveRecipientAttachmentNames, findExtraAndDuplicateFiles } from "@/lib/mail-merge/resolve-attachments";
+import type { RowProblem } from "@/lib/mail-merge/parse-recipients";
 
 type Recipient = { email: string; fields: Record<string, string> };
 
@@ -43,6 +46,7 @@ export default function MailMergePage() {
   const [smtp, setSmtp] = useState<SmtpConfigState>(EMPTY_SMTP_CONFIG);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [recipients, setRecipients] = useState<Recipient[] | null>(null);
+  const [problems, setProblems] = useState<RowProblem[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [subject, setSubject] = useState("");
@@ -60,7 +64,7 @@ export default function MailMergePage() {
   const [upgrade, setUpgrade] = useState<{ open: boolean; message?: string }>({ open: false });
 
   const hasAttachmentColumn = columns.some((c) => c.trim().toLowerCase() === "attachment");
-  const uploadedFilenames = useMemo(() => attachments.map((a) => a.name), [attachments]);
+  const uploadedFilenames = useMemo(() => attachments.map((a) => attachmentLeafName(a)), [attachments]);
   const attachmentIssues = useMemo(() => {
     if (!recipients || !hasAttachmentColumn) return [];
     const issues: { email: string; missing: string[] }[] = [];
@@ -70,6 +74,11 @@ export default function MailMergePage() {
     }
     return issues;
   }, [recipients, hasAttachmentColumn, uploadedFilenames]);
+  const { extra: extraFiles, duplicates: duplicateFiles } = useMemo(
+    () => (recipients ? findExtraAndDuplicateFiles(recipients, uploadedFilenames) : { extra: [], duplicates: [] }),
+    [recipients, uploadedFilenames]
+  );
+  const validationReady = attachmentIssues.length === 0;
 
   async function handleExcelFile(files: File[]) {
     const file = files[0];
@@ -77,6 +86,7 @@ export default function MailMergePage() {
     setError(null);
     setResult(null);
     setRecipients(null);
+    setProblems([]);
     setShowPreview(false);
     setParsing(true);
     try {
@@ -97,6 +107,7 @@ export default function MailMergePage() {
       setExcelFile(file);
       setRecipients(data.recipients);
       setColumns(data.columns);
+      setProblems(data.problems ?? []);
     } finally {
       setParsing(false);
     }
@@ -105,11 +116,18 @@ export default function MailMergePage() {
   function reset() {
     setExcelFile(null);
     setRecipients(null);
+    setProblems([]);
     setColumns([]);
     setAttachments([]);
     setError(null);
     setResult(null);
     setShowPreview(false);
+  }
+
+  function handleContinueWithValidOnly() {
+    if (!recipients) return;
+    const issueEmails = new Set(attachmentIssues.map((i) => i.email));
+    setRecipients(recipients.filter((r) => !issueEmails.has(r.email)));
   }
 
   async function handleSend() {
@@ -120,12 +138,6 @@ export default function MailMergePage() {
     }
     if (smtp.useCustom && (!smtp.host || !smtp.user || !smtp.password || !smtp.fromEmail)) {
       setError("Fill in your SMTP host, username, password, and from-email, or uncheck custom SMTP.");
-      return;
-    }
-    if (attachmentIssues.length > 0) {
-      setError(
-        `${attachmentIssues.length} recipient${attachmentIssues.length === 1 ? "" : "s"} reference an Attachment filename that hasn't been uploaded — check Step 3.`
-      );
       return;
     }
     setSending(true);
@@ -231,11 +243,8 @@ export default function MailMergePage() {
                   <span className="font-mono">invoice_john.pdf</span>) — then upload all the
                   files below and Mail Merge will match each recipient to their file.
                 </p>
-                <Dropzone
-                  accept="application/pdf"
-                  multiple
+                <AttachmentFolderPicker
                   onFiles={(files) => setAttachments((prev) => [...prev, ...files])}
-                  label="Drop PDFs here, or click to browse"
                   hint="Up to 30 attachments on the free plan"
                 />
                 {attachments.length > 0 && (
@@ -243,7 +252,7 @@ export default function MailMergePage() {
                     {attachments.map((file, i) => (
                       <FileChip
                         key={`${file.name}-${i}`}
-                        name={file.name}
+                        name={attachmentLeafName(file)}
                         size={file.size}
                         onRemove={() => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
                       />
@@ -256,26 +265,24 @@ export default function MailMergePage() {
                     per recipient instead of sent to everyone.
                   </p>
                 )}
-                {attachmentIssues.length > 0 && (
-                  <div className="mt-3 rounded-xl border border-status-danger/20 bg-status-danger/5 p-3 text-xs text-status-danger">
-                    <p className="font-semibold">
-                      {attachmentIssues.length} recipient{attachmentIssues.length === 1 ? "" : "s"} reference
-                      a file that hasn&apos;t been uploaded yet:
-                    </p>
-                    <ul className="mt-1.5 space-y-0.5">
-                      {attachmentIssues.slice(0, 5).map((issue) => (
-                        <li key={issue.email}>
-                          {issue.email}: {issue.missing.join(", ")}
-                        </li>
-                      ))}
-                      {attachmentIssues.length > 5 && <li>…and {attachmentIssues.length - 5} more</li>}
-                    </ul>
-                  </div>
-                )}
               </div>
 
               <div>
-                <StepLabel n={4}>Email composer</StepLabel>
+                <StepLabel n={4}>Validation report</StepLabel>
+                <RecipientValidationReport
+                  cleanCount={recipients.length - attachmentIssues.length}
+                  problems={problems}
+                  attachmentIssues={attachmentIssues}
+                  extraFiles={extraFiles}
+                  duplicateFiles={duplicateFiles}
+                  onContinue={handleContinueWithValidOnly}
+                />
+              </div>
+
+              {validationReady && (
+              <>
+              <div>
+                <StepLabel n={5}>Email composer</StepLabel>
                 {columns.length > 0 && (
                   <p className="mb-3 flex flex-wrap gap-1.5 text-xs text-brand-brown-dark/70">
                     Merge fields:{" "}
@@ -312,7 +319,7 @@ export default function MailMergePage() {
               </div>
 
               <div>
-                <StepLabel n={5}>Email preview</StepLabel>
+                <StepLabel n={6}>Email preview</StepLabel>
                 <button
                   type="button"
                   data-hover="true"
@@ -334,7 +341,7 @@ export default function MailMergePage() {
               {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
 
               <div>
-                <StepLabel n={6}>Send emails</StepLabel>
+                <StepLabel n={7}>Send emails</StepLabel>
                 <MagneticButton onClick={handleSend} disabled={sending}>
                   {sending ? (
                     <>
@@ -349,7 +356,7 @@ export default function MailMergePage() {
 
               {result && (
                 <div>
-                  <StepLabel n={7}>Reports & logs</StepLabel>
+                  <StepLabel n={8}>Reports & logs</StepLabel>
                   <div className="rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4 text-sm text-brand-brown-dark">
                     <p className="font-semibold">
                       {result.sent} sent, {result.failed} failed.
@@ -377,6 +384,8 @@ export default function MailMergePage() {
                     </div>
                   </div>
                 </div>
+              )}
+              </>
               )}
             </>
           )}

@@ -22,12 +22,12 @@ export async function POST(request: Request) {
 
   try {
     const buffer = await file.arrayBuffer();
-    const { recipients, columns } = parseRecipientsFile(buffer);
+    const { valid, problems, columns } = parseRecipientsFile(buffer);
 
-    if (limits.maxEmailsPerJob !== -1 && recipients.length > limits.maxEmailsPerJob) {
+    if (limits.maxEmailsPerJob !== -1 && valid.length > limits.maxEmailsPerJob) {
       return NextResponse.json(
         {
-          error: `The free plan allows up to ${limits.maxEmailsPerJob} emails per mail merge job. Your file has ${recipients.length} recipients.`,
+          error: `The free plan allows up to ${limits.maxEmailsPerJob} emails per mail merge job. Your file has ${valid.length} valid recipients.`,
           limitReached: true,
         },
         { status: 400 }
@@ -35,8 +35,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      recipients: recipients.map((r) => ({ email: r.email, fields: r.fields })),
+      recipients: valid.map((r) => ({ email: r.email, fields: r.fields })),
       columns,
+      problems,
     });
   } catch (err) {
     return NextResponse.json(
