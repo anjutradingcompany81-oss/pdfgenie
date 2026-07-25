@@ -395,7 +395,7 @@ export default function MailMergePage() {
           <div className="rounded-2xl border border-brand-brown-dark/10 bg-white p-6">
             <div className="flex items-center gap-2">
               <Sparkles size={16} className="text-brand-blue-deep" />
-              <h3 className="text-sm font-bold uppercase tracking-wide text-brand-brown-dark">Premium</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wide text-brand-brown-dark">Pro</h3>
             </div>
             <ul className="mt-3 space-y-2">
               {PREMIUM_FEATURES.map((feature) => (
@@ -414,7 +414,7 @@ export default function MailMergePage() {
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-brand-blue-deep py-2.5 text-xs font-semibold text-white"
             >
               <FileText size={14} />
-              Upgrade to Premium
+              Upgrade to Pro
             </button>
           </div>
         </div>
