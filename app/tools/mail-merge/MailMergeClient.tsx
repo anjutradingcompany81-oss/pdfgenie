@@ -31,6 +31,7 @@ import { TemplateLibrary } from "@/components/mail-merge/TemplateLibrary";
 import { EmailPreview } from "@/components/mail-merge/EmailPreview";
 import { AttachmentFolderPicker, attachmentLeafName } from "@/components/mail-merge/AttachmentFolderPicker";
 import { RecipientValidationReport } from "@/components/mail-merge/RecipientValidationReport";
+import { UploadDialog } from "@/components/mail-merge/UploadDialog";
 import { ConfirmSendDialog } from "@/components/mail-merge/ConfirmSendDialog";
 import { SendProgress } from "@/components/mail-merge/SendProgress";
 import { WizardStepper, type WizardStepId } from "@/components/mail-merge/WizardStepper";
@@ -142,6 +143,7 @@ export default function MailMergePage() {
   const [startedJob, setStartedJob] = useState<{ jobId: string; recipientCount: number } | null>(null);
 
   const richTextRef = useRef<RichTextEditorHandle>(null);
+  const [attachmentsModalOpen, setAttachmentsModalOpen] = useState(false);
   const [usageRefreshKey, setUsageRefreshKey] = useState(0);
   const [upgrade, setUpgrade] = useState<{ open: boolean; message?: string }>({ open: false });
 
@@ -431,13 +433,52 @@ export default function MailMergePage() {
                     step="attachments"
                     title="Attach PDF files"
                     description={
-                      'Optional. By default, every file you drop here goes to every recipient. To send a different file per person, add a column named "Attachment" to your Excel sheet with the exact filename to send them (e.g. invoice_john.pdf), then upload all the files below.'
+                      'Optional. By default, every file you upload goes to every recipient. To send a different file per person, add a column named "Attachment" to your Excel sheet with the exact filename to send them (e.g. invoice_john.pdf).'
                     }
                   />
-                  <AttachmentFolderPicker
-                    onFiles={(files) => setAttachments((prev) => [...prev, ...files])}
-                    hint="Up to 30 attachments on the free plan"
+
+                  <RecipientValidationReport
+                    cleanCount={recipients.length - attachmentIssues.length}
+                    problems={problems}
+                    attachmentIssues={attachmentIssues}
+                    extraFiles={extraFiles}
+                    duplicateFiles={duplicateFiles}
+                    onContinue={handleContinueWithValidOnly}
                   />
+
+                  <button
+                    type="button"
+                    data-hover="true"
+                    onClick={() => setAttachmentsModalOpen(true)}
+                    className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-brand-brown-dark/15 bg-white p-4 text-left transition-colors hover:border-brand-blue/40 hover:bg-brand-blue/5"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-blue-deep to-brand-blue text-white">
+                      <Paperclip size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-brand-brown-dark">
+                        {attachments.length > 0 ? "Add more PDF files" : "Attach PDF files"}
+                      </span>
+                      <span className="block text-xs text-brand-brown-dark/60">
+                        Up to 30 attachments on the free plan, or select a whole folder
+                      </span>
+                    </span>
+                  </button>
+
+                  <UploadDialog
+                    open={attachmentsModalOpen}
+                    title="Attach PDF files"
+                    onClose={() => setAttachmentsModalOpen(false)}
+                  >
+                    <AttachmentFolderPicker
+                      onFiles={(files) => {
+                        setAttachments((prev) => [...prev, ...files]);
+                        setAttachmentsModalOpen(false);
+                      }}
+                      hint="Up to 30 attachments on the free plan"
+                    />
+                  </UploadDialog>
+
                   {attachments.length > 0 && (
                     <div className="mt-4 space-y-2">
                       {attachments.map((file, i) => (
@@ -456,17 +497,6 @@ export default function MailMergePage() {
                       instead of sent to everyone.
                     </p>
                   )}
-
-                  <div className="mt-8">
-                    <RecipientValidationReport
-                      cleanCount={recipients.length - attachmentIssues.length}
-                      problems={problems}
-                      attachmentIssues={attachmentIssues}
-                      extraFiles={extraFiles}
-                      duplicateFiles={duplicateFiles}
-                      onContinue={handleContinueWithValidOnly}
-                    />
-                  </div>
 
                   <WizardNav
                     onBack={() => setComposeStep("recipients")}
