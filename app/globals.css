@@ -27,6 +27,62 @@
   --color-status-success: #059669;
   --color-status-danger: #dc2626;
   --color-status-warning: #d97706;
+
+  /* Card shape/elevation — theme-driven so Creative Tim/Preline can swap a
+     soft diffused look vs a crisp bordered one without per-component logic.
+     Default matches the site's existing rounded-3xl card look, no shadow. */
+  --radius-card: 1.5rem;
+  --shadow-card: none;
+}
+
+/* Creative Tim theme — gradient purple/pink accents, soft diffused "Soft UI"
+   card shadows, floating pill navbar. See components/layout/ThemeSwitcher.tsx. */
+:root[data-theme="creative-tim"] {
+  --background: #faf7ff;
+  --foreground: #1e1b2e;
+
+  --color-brand-blue: #7928ca;
+  --color-brand-blue-deep: #5b1a9c;
+  --color-brand-blue-light: #ff0080;
+
+  --color-brand-brown: #6b21a8;
+  --color-brand-brown-dark: #252f40;
+  --color-brand-cream: #f8f9fc;
+
+  --color-brand-surface: #ffffff;
+  --color-brand-gold-glow: #ff0080;
+
+  --color-status-success: #059669;
+  --color-status-danger: #dc2626;
+  --color-status-warning: #d97706;
+
+  --radius-card: 1.25rem;
+  --shadow-card: 0 20px 27px rgba(0, 0, 0, 0.06);
+}
+
+/* Preline theme — flat indigo accent, structured bordered cards, two-column
+   hero. See components/layout/ThemeSwitcher.tsx. */
+:root[data-theme="preline"] {
+  --background: #ffffff;
+  --foreground: #1f2937;
+
+  --color-brand-blue: #4f39fa;
+  --color-brand-blue-deep: #3c2ad1;
+  --color-brand-blue-light: #7c6bfb;
+
+  --color-brand-brown: #4f39fa;
+  --color-brand-brown-dark: #1f2937;
+  --color-brand-cream: #f9fafb;
+
+  --color-brand-surface: #ffffff;
+  --color-brand-gold-glow: #4f39fa;
+
+  --color-status-success: #0d9488;
+  --color-status-danger: #dc2626;
+  --color-status-warning: #b45309;
+
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
 }
 
 @theme inline {
@@ -43,6 +99,8 @@
   --color-status-success: var(--color-status-success);
   --color-status-danger: var(--color-status-danger);
   --color-status-warning: var(--color-status-warning);
+  --radius-card: var(--radius-card);
+  --shadow-card: var(--shadow-card);
   --font-poppins: var(--font-poppins);
   --animate-marquee: marquee 30s linear infinite;
   --animate-marquee-fast: marquee 16s linear infinite;

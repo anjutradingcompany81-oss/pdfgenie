@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { ToolsMegaMenu } from "@/components/tools/ToolsMegaMenu";
 import { SearchTools } from "@/components/tools/SearchTools";
 
@@ -80,6 +81,7 @@ export function Navbar() {
           </div>
 
           <div className="hidden shrink-0 items-center gap-5 lg:flex">
+            <ThemeSwitcher />
             {isLoading ? (
               <div className="h-9 w-24 animate-pulse rounded-full bg-brand-brown-dark/10" aria-label="Checking sign-in status" role="status" />
             ) : isAuthed ? (

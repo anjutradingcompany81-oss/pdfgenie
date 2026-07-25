@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react";
 import { useRef } from "react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { Avatar } from "@/components/ui/Avatar";
+import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { SearchTools } from "@/components/tools/SearchTools";
 import { MobileToolCategories } from "@/components/tools/MobileToolCategories";
 import { useModalA11y } from "@/components/ui/useModalA11y";
@@ -52,14 +53,17 @@ export function MobileMenu({
         <span className="text-lg font-bold">
           PDF<span className="text-brand-blue-light">Genie</span>
         </span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close menu"
-          className="flex h-10 w-10 items-center justify-center text-2xl"
-        >
-          &times;
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeSwitcher variant="dark" />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close menu"
+            className="flex h-10 w-10 items-center justify-center text-2xl"
+          >
+            &times;
+          </button>
+        </div>
       </div>
 
       <motion.div
