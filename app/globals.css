@@ -329,6 +329,23 @@ html.has-custom-cursor * {
   align-items: center;
 }
 
+/* Elsewhere the headline/copy is centered on the page (see Hero.tsx), but
+   under Preline it sits in the left column next to the mockup card, where a
+   left-aligned "text left, image right" layout reads correctly instead. */
+[data-theme="preline"] .hero-copy {
+  text-align: left;
+}
+
+[data-theme="preline"] .hero-copy h1,
+[data-theme="preline"] .hero-copy p {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+[data-theme="preline"] .hero-cta {
+  justify-content: flex-start;
+}
+
 [data-theme="preline"] .hero-mockup {
   display: block;
   border-radius: var(--radius-card);

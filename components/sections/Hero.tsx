@@ -30,6 +30,7 @@ export function Hero() {
           initial={reduceMotion ? undefined : "hidden"}
           animate={reduceMotion ? undefined : "show"}
           variants={staggerContainer(0.15, 0.2)}
+          className="hero-copy text-center"
         >
           <motion.p
             variants={fadeUp}
@@ -40,20 +41,20 @@ export function Hero() {
 
           <motion.h1
             variants={fadeUp}
-            className="max-w-2xl text-4xl font-bold tracking-tight text-brand-brown-dark sm:text-5xl"
+            className="mx-auto max-w-2xl text-4xl font-bold tracking-tight text-brand-brown-dark sm:text-5xl"
           >
             Every PDF task, one calm tool
           </motion.h1>
 
           <motion.p
             variants={fadeUp}
-            className="mt-5 max-w-xl text-base text-brand-brown-dark/70 sm:text-lg"
+            className="mx-auto mt-5 max-w-xl text-base text-brand-brown-dark/70 sm:text-lg"
           >
             Merge, split, compress, convert, and sign PDFs in seconds — no
             installs, no watermarks, no waiting on a spinner.
           </motion.p>
 
-          <motion.div variants={fadeUp} className="mt-7 flex flex-wrap items-center gap-5">
+          <motion.div variants={fadeUp} className="hero-cta mt-7 flex flex-wrap items-center justify-center gap-5">
             <MagneticButton href="/tools">Start for free</MagneticButton>
             <MagneticButton href="#how-it-works" variant="outline">
               See how it works
