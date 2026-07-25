@@ -115,7 +115,7 @@ export function SearchTools({
           aria-autocomplete="list"
           autoComplete="off"
           className={`w-full min-w-0 bg-transparent focus:outline-none ${
-            isLg ? "text-base sm:text-lg" : "text-sm lg:w-24 xl:w-40"
+            isLg ? "text-base sm:text-lg" : "text-sm lg:w-56 xl:w-72"
           } ${
             isDark ? "text-white placeholder:text-white/40" : "text-brand-brown-dark placeholder:text-brand-brown-dark/70"
           }`}
