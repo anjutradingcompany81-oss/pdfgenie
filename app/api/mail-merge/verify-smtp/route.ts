@@ -81,8 +81,11 @@ export async function POST(request: Request) {
   const host = typeof body?.host === "string" ? body.host.trim() : "";
   const port = Number(body?.port) || 587;
   const secure = Boolean(body?.secure);
-  const user = typeof body?.user === "string" ? body.user : "";
-  const password = typeof body?.password === "string" ? body.password : "";
+  const user = typeof body?.user === "string" ? body.user.trim() : "";
+  // Providers often display app passwords space-separated for readability
+  // ("xxxx xxxx xxxx xxxx") — the real password has no spaces, so strip
+  // all whitespace in case it got copied verbatim.
+  const password = typeof body?.password === "string" ? body.password.replace(/\s+/g, "") : "";
 
   if (!host || !user || !password) {
     return NextResponse.json({ ok: false, error: "Host, username, and password are required." }, { status: 400 });
