@@ -4,6 +4,7 @@ import { Languages, Loader2, ArrowRightLeft } from "lucide-react";
 import { useState } from "react";
 import { ToolShell } from "@/components/tools/ToolShell";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { recordToolUsage } from "@/lib/tool-usage-client";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -54,6 +55,7 @@ export default function TranslatePage() {
         return;
       }
       setResult(data.translatedText);
+      recordToolUsage();
     } catch {
       setError("Something went wrong. Try again.");
     } finally {

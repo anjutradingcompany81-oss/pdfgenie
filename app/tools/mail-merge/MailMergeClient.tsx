@@ -163,6 +163,7 @@ export default function MailMergePage() {
       icon={Mail}
       title="Mail Merge"
       description="Send personalized emails to a list from an Excel file, with optional PDF attachments."
+      skipUsageGate
     >
       <div className="mb-6 flex justify-end">
         <Link
