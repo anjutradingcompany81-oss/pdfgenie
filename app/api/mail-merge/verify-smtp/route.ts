@@ -68,7 +68,10 @@ const APP_PASSWORD_HINTS: { hostIncludes: string; messagePattern: RegExp; hint: 
 
 function friendlyAuthError(host: string, rawMessage: string): string {
   const match = APP_PASSWORD_HINTS.find((h) => host.includes(h.hostIncludes) && h.messagePattern.test(rawMessage));
-  return match ? match.hint : rawMessage;
+  // Always include the raw provider text too — the hint is a best guess at
+  // *why*, but hiding the original error makes a second, different failure
+  // indistinguishable from the first one.
+  return match ? `${match.hint}\n\nDetails: ${rawMessage}` : rawMessage;
 }
 
 export async function POST(request: Request) {

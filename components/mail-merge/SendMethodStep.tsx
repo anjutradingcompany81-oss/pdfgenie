@@ -196,7 +196,7 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
           </div>
         )}
 
-        {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
+        {error && <p className="whitespace-pre-line text-sm font-medium text-status-danger">{error}</p>}
 
         <MagneticButton onClick={handleVerifyAndContinue} disabled={verifying}>
           {verifying ? (
