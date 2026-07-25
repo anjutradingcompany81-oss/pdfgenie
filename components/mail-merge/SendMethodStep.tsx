@@ -157,6 +157,9 @@ export function SendMethodStep({ onContinue }: { onContinue: (config: SmtpConfig
             Outlook.com/Hotmail needs an app password, not your regular password — generate one at{" "}
             <span className="font-mono">account.live.com/proofs/AppPassword</span>. Using a work/school
             (Microsoft 365) address instead? SMTP AUTH must be enabled for that mailbox by an admin first.
+            Note: some accounts (especially newly-created ones) have SMTP access disabled entirely by
+            Microsoft — no app password fixes that; if you hit that error, try an older Outlook account or
+            use Gmail instead for now.
           </p>
         )}
         {unrecognized && (

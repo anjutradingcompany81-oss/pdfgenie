@@ -43,7 +43,19 @@ function isPrivateIPv6(ip: string): boolean {
 // their own "less secure app" policy) is involved, and their raw rejection
 // text doesn't say so in plain language — point the user at the fix instead
 // of just relaying Google/Microsoft/Yahoo's own error string.
+//
+// Checked in order — "SmtpClientAuthentication is disabled" must come
+// before the generic Outlook app-password hint below, since it's a
+// completely different (account-level, not password-level) cause that
+// also happens to trip the same "Authentication unsuccessful" wording,
+// and it fires for both smtp-mail.outlook.com (personal) and
+// smtp.office365.com (work/school) hosts.
 const APP_PASSWORD_HINTS: { hostIncludes: string; messagePattern: RegExp; hint: string }[] = [
+  {
+    hostIncludes: "outlook.com",
+    messagePattern: /SmtpClientAuthentication is disabled|5\.7\.139/i,
+    hint: "Microsoft has SMTP access turned off for this specific mailbox — this is an account-level restriction, not a password problem, so no app password will fix it. This is common for newly-created personal Outlook.com/Hotmail accounts and for Microsoft 365 (work/school) mailboxes where an admin hasn't enabled SMTP AUTH. There's usually no self-service way to turn it back on for a personal account. Your options: use a Gmail account instead (works today), use an older/established Outlook account if you have one, or wait for the \"Sign in with Microsoft\" option — it uses a different Microsoft API that isn't affected by this restriction.",
+  },
   {
     hostIncludes: "gmail.com",
     messagePattern: /BadCredentials|Username and Password not accepted/i,
@@ -56,7 +68,7 @@ const APP_PASSWORD_HINTS: { hostIncludes: string; messagePattern: RegExp; hint: 
   },
   {
     hostIncludes: "office365.com",
-    messagePattern: /5\.7\.139|basic auth|BasicAuth|SmtpClientAuthentication/i,
+    messagePattern: /basic auth|BasicAuth/i,
     hint: "This Microsoft 365 (work/school) account has Basic Authentication disabled for SMTP — Microsoft retired regular-password SMTP login for these accounts. Ask your admin to enable SMTP AUTH for this mailbox, or use a personal outlook.com/hotmail.com account instead, which supports an app password.",
   },
   {
