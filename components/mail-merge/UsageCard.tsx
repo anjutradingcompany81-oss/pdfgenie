@@ -2,9 +2,10 @@
 
 import { Gauge } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PLAN_DISPLAY, type PlanKey } from "@/lib/plans/config";
 
 type Usage = {
-  plan: string;
+  plan: PlanKey;
   emailsSentToday: number;
   maxEmailsPerDay: number;
   remainingToday: number;
@@ -31,7 +32,7 @@ export function UsageCard({ refreshKey }: { refreshKey: number }) {
       <div className="flex items-center gap-2">
         <Gauge size={16} className="text-brand-blue-deep" />
         <h3 className="text-sm font-bold uppercase tracking-wide text-brand-brown-dark">
-          {usage.plan === "FREE" ? "Free Plan Usage" : `${usage.plan} Plan Usage`}
+          {PLAN_DISPLAY[usage.plan].name} Plan Usage
         </h3>
       </div>
 
@@ -60,9 +61,7 @@ export function UsageCard({ refreshKey }: { refreshKey: number }) {
         </div>
         <div className="flex justify-between">
           <dt>Plan</dt>
-          <dd className="font-semibold text-brand-brown-dark">
-            {usage.plan.charAt(0) + usage.plan.slice(1).toLowerCase()}
-          </dd>
+          <dd className="font-semibold text-brand-brown-dark">{PLAN_DISPLAY[usage.plan].name}</dd>
         </div>
       </dl>
     </div>

@@ -102,10 +102,14 @@ export const PLAN_FEATURES: Record<PlanKey, FeatureFlag[]> = {
   ],
 };
 
+// Display names match the marketing tiers on the homepage pricing table
+// (components/sections/Pricing.tsx) and Razorpay Dashboard plan names —
+// PREMIUM/ENTERPRISE are the internal PlanKey values, "Pro"/"Team" are what
+// the user actually sees and pays for.
 export const PLAN_DISPLAY: Record<PlanKey, { name: string; tagline: string }> = {
   FREE: { name: "Free", tagline: "Standard mail merge, up to 30 emails per job" },
-  PREMIUM: { name: "Premium", tagline: "Unlimited sending, scheduling, and integrations" },
-  ENTERPRISE: { name: "Enterprise", tagline: "Unlimited everything, team and org controls" },
+  PREMIUM: { name: "Pro", tagline: "Unlimited sending, scheduling, and integrations" },
+  ENTERPRISE: { name: "Team", tagline: "Unlimited everything, team and org controls" },
 };
 
 export function hasFeature(plan: PlanKey, feature: FeatureFlag): boolean {

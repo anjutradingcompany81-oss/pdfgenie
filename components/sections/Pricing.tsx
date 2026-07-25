@@ -4,20 +4,22 @@ import { Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { Reveal, StaggerItem, StaggerReveal } from "@/components/ui/Reveal";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { CheckoutButton } from "@/components/billing/CheckoutButton";
 
 const TIERS = [
   {
     name: "Free",
-    price: "$0",
+    price: "₹0",
     period: "forever",
     description: "For occasional PDF cleanup.",
     features: ["5 files / day", "Merge & split", "Basic compression", "Watermark-free"],
     cta: "Start for free",
     highlighted: false,
+    planKey: null,
   },
   {
     name: "Pro",
-    price: "$12",
+    price: "₹999",
     period: "/ month",
     description: "For people living in PDFs every day.",
     features: [
@@ -27,12 +29,13 @@ const TIERS = [
       "Priority conversion queue",
       "Password protection",
     ],
-    cta: "Start 14-day trial",
+    cta: "Upgrade to Pro",
     highlighted: true,
+    planKey: "PREMIUM",
   },
   {
     name: "Team",
-    price: "$39",
+    price: "₹2,999",
     period: "/ month",
     description: "For departments that share workflows.",
     features: [
@@ -42,10 +45,11 @@ const TIERS = [
       "Admin controls",
       "SSO on request",
     ],
-    cta: "Talk to sales",
+    cta: "Upgrade to Team",
     highlighted: false,
+    planKey: "ENTERPRISE",
   },
-];
+] as const;
 
 export function Pricing() {
   return (
@@ -113,13 +117,24 @@ export function Pricing() {
                 </ul>
 
                 <div className="mt-10">
-                  <MagneticButton
-                    href="/tools"
-                    variant={tier.highlighted ? "inverted" : "outline"}
-                    className="w-full justify-center"
-                  >
-                    {tier.cta}
-                  </MagneticButton>
+                  {tier.planKey ? (
+                    <CheckoutButton
+                      planKey={tier.planKey}
+                      planLabel={tier.name}
+                      variant={tier.highlighted ? "inverted" : "outline"}
+                      className="w-full justify-center"
+                    >
+                      {tier.cta}
+                    </CheckoutButton>
+                  ) : (
+                    <MagneticButton
+                      href="/tools"
+                      variant={tier.highlighted ? "inverted" : "outline"}
+                      className="w-full justify-center"
+                    >
+                      {tier.cta}
+                    </MagneticButton>
+                  )}
                 </div>
               </motion.div>
             </StaggerItem>

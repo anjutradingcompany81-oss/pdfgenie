@@ -3,6 +3,8 @@ import { Combine, Scissors, FileArchive, RefreshCw, User, Clock } from "lucide-r
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Reveal } from "@/components/ui/Reveal";
+import { getCurrentPlan } from "@/lib/plans/get-current-plan";
+import { PLAN_DISPLAY } from "@/lib/plans/config";
 
 const QUICK_LINKS = [
   { href: "/tools/merge", icon: Combine, label: "Merge" },
@@ -23,6 +25,8 @@ export default async function DashboardPage() {
     orderBy: { createdAt: "desc" },
     take: 5,
   });
+
+  const plan = await getCurrentPlan(session!.user.id);
 
   const memberSince = user?.createdAt.toLocaleDateString("en-US", {
     year: "numeric",
@@ -65,6 +69,16 @@ export default async function DashboardPage() {
               </div>
               <p className="mt-4 text-xs text-brand-brown-dark/70">
                 Member since {memberSince}
+              </p>
+              <p className="mt-2 flex items-center gap-2 text-sm">
+                <span className="rounded-full bg-brand-blue/10 px-3 py-1 text-xs font-semibold text-brand-blue-deep">
+                  {PLAN_DISPLAY[plan].name} plan
+                </span>
+                {plan === "FREE" && (
+                  <Link href="/#pricing" data-hover="true" className="text-xs font-semibold text-brand-blue-deep hover:underline">
+                    Upgrade
+                  </Link>
+                )}
               </p>
               <Link
                 href="/dashboard/profile"

@@ -34,18 +34,19 @@ async function main() {
 
   console.log(`Seeded admin account: ${admin.email}`);
 
-  // Plan rows exist so future billing code has real IDs to reference — only
-  // FREE is active. Limits/features actually enforced today live in
-  // lib/plans/config.ts, not these rows.
+  // Plan rows so billing code has real IDs to reference. priceCents is in
+  // paise (INR) here, not cents — Razorpay bills in INR for this account.
+  // The actual charge amount lives on the Razorpay Plan (RAZORPAY_PLAN_ID_*
+  // env vars); these rows are for display/bookkeeping, not billing math.
   const plans = [
     { key: "FREE" as const, name: "Free", priceCents: 0, isActive: true },
-    { key: "PREMIUM" as const, name: "Premium", priceCents: 0, isActive: false },
-    { key: "ENTERPRISE" as const, name: "Enterprise", priceCents: 0, isActive: false },
+    { key: "PREMIUM" as const, name: "Pro", priceCents: 99900, isActive: true },
+    { key: "ENTERPRISE" as const, name: "Team", priceCents: 299900, isActive: true },
   ];
   for (const plan of plans) {
     await prisma.plan.upsert({
       where: { key: plan.key },
-      update: { name: plan.name, isActive: plan.isActive },
+      update: { name: plan.name, priceCents: plan.priceCents, isActive: plan.isActive },
       create: plan,
     });
   }

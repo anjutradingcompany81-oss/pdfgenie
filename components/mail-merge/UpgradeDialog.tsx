@@ -1,8 +1,8 @@
 "use client";
 
-import { Check, Loader2, Sparkles, X } from "lucide-react";
-import { useRef, useState } from "react";
-import { MagneticButton } from "@/components/ui/MagneticButton";
+import { Check, Sparkles, X } from "lucide-react";
+import { useRef } from "react";
+import { CheckoutButton } from "@/components/billing/CheckoutButton";
 import { useModalA11y } from "@/components/ui/useModalA11y";
 
 const PREMIUM_HIGHLIGHTS = [
@@ -17,38 +17,18 @@ const PREMIUM_HIGHLIGHTS = [
 export function UpgradeDialog({
   open,
   onClose,
-  title = "Upgrade to PDF Genie Premium",
+  title = "Upgrade to PDF Genie Pro",
   message,
-  feature = "mail-merge",
 }: {
   open: boolean;
   onClose: () => void;
   title?: string;
   message?: string;
-  feature?: string;
 }) {
-  const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   useModalA11y(panelRef, open, onClose);
 
   if (!open) return null;
-
-  async function handleNotifyMe() {
-    if (!email.trim()) return;
-    setBusy(true);
-    try {
-      await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, feature }),
-      });
-      setDone(true);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-brand-brown-dark/50 px-6 py-10">
@@ -87,31 +67,11 @@ export function UpgradeDialog({
           ))}
         </ul>
 
-        <div className="mt-5 rounded-2xl border border-dashed border-brand-brown-dark/20 bg-brand-cream px-4 py-3">
-          <p className="text-sm font-semibold text-brand-brown-dark">Coming soon</p>
-          <p className="mt-1 text-xs text-brand-brown-dark/70">
-            Payment and subscription management will be available in a future release.
-          </p>
+        <div className="mt-5">
+          <CheckoutButton planKey="PREMIUM" planLabel="Pro" className="w-full justify-center">
+            Upgrade to Pro — ₹999/month
+          </CheckoutButton>
         </div>
-
-        {done ? (
-          <p className="mt-4 text-sm font-medium text-brand-blue-deep">
-            Thanks — we&apos;ll let you know when Premium is available.
-          </p>
-        ) : (
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              className="flex-1 rounded-full border border-brand-brown-dark/15 px-4 py-2.5 text-sm text-brand-brown-dark outline-none focus:border-brand-blue"
-            />
-            <MagneticButton onClick={handleNotifyMe} disabled={busy} className="shrink-0 px-6 py-2.5 text-xs">
-              {busy ? <Loader2 size={14} className="animate-spin" /> : "Notify Me"}
-            </MagneticButton>
-          </div>
-        )}
 
         <button
           type="button"
