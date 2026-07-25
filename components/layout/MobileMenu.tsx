@@ -86,11 +86,6 @@ export function MobileMenu({
             {link.label}
           </a>
         ))}
-        {!isAuthed && (
-          <NextLink href="/admin/dashboard/login" onClick={onClose} className="text-sm font-semibold text-white/70">
-            Admin
-          </NextLink>
-        )}
       </motion.nav>
 
       <motion.div
@@ -145,6 +140,13 @@ export function MobileMenu({
             <MagneticButton href="/signup" onClick={onClose} variant="inverted" className="w-full justify-center">
               Sign up
             </MagneticButton>
+            <NextLink
+              href="/admin/dashboard/login"
+              onClick={onClose}
+              className="block text-center text-sm font-semibold text-white/70"
+            >
+              Admin
+            </NextLink>
           </div>
         )}
       </motion.div>

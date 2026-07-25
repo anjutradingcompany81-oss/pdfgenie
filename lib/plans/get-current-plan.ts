@@ -3,21 +3,23 @@ import type { PlanKey } from "@/lib/plans/config";
 
 /**
  * Resolves the plan a user (or anonymous visitor) is on. Anonymous
- * visitors are always FREE. Signed-in users would read their
- * Subscription row here once billing exists — for now every user is FREE
- * too, since Subscription is never written to by any active code path
- * (see prisma/schema.prisma's comment on that model).
+ * visitors are always FREE. Signed-in users read their Subscription row —
+ * ADMIN accounts always resolve to the top tier regardless of billing
+ * state, so the site owner/support staff are never blocked by their own
+ * plan gates.
  */
 export async function getCurrentPlan(userId: string | null): Promise<PlanKey> {
   if (!userId) return "FREE";
 
-  const subscription = await prisma.subscription.findUnique({
-    where: { userId },
-    include: { plan: true },
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, subscription: { include: { plan: true } } },
   });
 
-  if (subscription && subscription.status === "ACTIVE") {
-    return subscription.plan.key;
+  if (user?.role === "ADMIN") return "ENTERPRISE";
+
+  if (user?.subscription && user.subscription.status === "ACTIVE") {
+    return user.subscription.plan.key;
   }
 
   return "FREE";

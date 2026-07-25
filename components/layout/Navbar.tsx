@@ -64,17 +64,6 @@ export function Navbar() {
               </a>
             ))}
 
-            {!isAuthed && (
-              <Link
-                href="/admin/dashboard/login"
-                data-hover="true"
-                className="group relative shrink-0 text-sm font-semibold text-brand-brown-dark"
-              >
-                Admin
-                <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
-              </Link>
-            )}
-
             <ToolsMegaMenu activeHref={pathname} />
 
             <SearchTools />
@@ -98,6 +87,14 @@ export function Navbar() {
                 <MagneticButton href="/signup" className="px-6 py-3 text-xs">
                   Sign up
                 </MagneticButton>
+                <Link
+                  href="/admin/dashboard/login"
+                  data-hover="true"
+                  className="group relative shrink-0 text-sm font-semibold text-brand-brown-dark"
+                >
+                  Admin
+                  <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
+                </Link>
               </>
             )}
           </div>
