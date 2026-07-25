@@ -47,7 +47,7 @@ export default function SignUpPageClient() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push("/auth/post-login");
       router.refresh();
     } catch {
       setError("Something went wrong. Try again.");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAdminApi } from "@/lib/require-admin-api";
+import { isAdminGrantExpired } from "@/lib/plans/subscription-expiry";
 
 export async function GET(request: NextRequest) {
   const { response } = await requireAdminApi();
@@ -25,16 +26,24 @@ export async function GET(request: NextRequest) {
       disabled: true,
       createdAt: true,
       image: true,
-      subscription: { select: { status: true, plan: { select: { key: true } } } },
+      subscription: {
+        select: { status: true, provider: true, currentPeriodEnd: true, plan: { select: { key: true } } },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
 
-  const withPlan = users.map(({ subscription, ...user }) => ({
-    ...user,
-    plan: subscription?.status === "ACTIVE" ? subscription.plan.key : "FREE",
-  }));
+  const withPlan = users.map(({ subscription, ...user }) => {
+    const active = subscription?.status === "ACTIVE" && !isAdminGrantExpired(subscription);
+    const plan = active ? subscription!.plan.key : "FREE";
+    const isTrial = active && subscription!.provider === null && subscription!.currentPeriodEnd !== null;
+    return {
+      ...user,
+      plan,
+      trialEndsAt: isTrial ? subscription!.currentPeriodEnd : null,
+    };
+  });
 
   return NextResponse.json({ users: withPlan });
 }

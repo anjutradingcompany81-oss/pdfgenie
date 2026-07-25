@@ -28,6 +28,14 @@ function GoogleIcon() {
 const PROVIDERS = [{ id: "google", label: "Continue with Google", Icon: GoogleIcon }] as const;
 
 export function SocialButtons({ callbackUrl }: { callbackUrl?: string }) {
+  // Google's own OAuth redirect flow doesn't give us a client-side hook to
+  // decide "where next" after auth completes, so it's routed through the
+  // same shared decision page credentials login uses (app/auth/post-login)
+  // instead of hardcoding a destination here.
+  const target = callbackUrl
+    ? `/auth/post-login?callbackUrl=${encodeURIComponent(callbackUrl)}`
+    : "/auth/post-login";
+
   return (
     <div className="space-y-3">
       {PROVIDERS.map(({ id, label, Icon }) => (
@@ -35,7 +43,7 @@ export function SocialButtons({ callbackUrl }: { callbackUrl?: string }) {
           key={id}
           type="button"
           data-hover="true"
-          onClick={() => signIn(id, { callbackUrl: callbackUrl || "/dashboard" })}
+          onClick={() => signIn(id, { callbackUrl: target })}
           className="flex w-full items-center justify-center gap-3 rounded-full border border-brand-brown-dark/15 bg-white px-5 py-3 text-sm font-semibold text-brand-brown-dark transition-colors hover:border-brand-blue/40 hover:bg-brand-cream"
         >
           <Icon />

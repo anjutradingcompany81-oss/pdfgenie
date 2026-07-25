@@ -11,7 +11,10 @@ import { SocialButtons } from "@/components/auth/SocialButtons";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  // Not defaulted: an explicit callbackUrl (e.g. sent here from a blocked
+  // tool or mid-checkout) means resume that intent exactly. With none, we
+  // let /auth/post-login decide Free users see /choose-plan first.
+  const explicitCallbackUrl = searchParams.get("callbackUrl");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +40,11 @@ function LoginForm() {
         return;
       }
 
-      router.push(callbackUrl);
+      router.push(
+        explicitCallbackUrl
+          ? `/auth/post-login?callbackUrl=${encodeURIComponent(explicitCallbackUrl)}`
+          : "/auth/post-login"
+      );
       router.refresh();
     } catch {
       setError("Something went wrong. Try again.");
@@ -135,7 +142,7 @@ function LoginForm() {
             <span className="h-px flex-1 bg-brand-brown-dark/10" />
           </div>
 
-          <SocialButtons callbackUrl={callbackUrl} />
+          <SocialButtons callbackUrl={explicitCallbackUrl ?? undefined} />
         </div>
 
         <p className="mt-6 text-center text-sm text-brand-brown-dark/65">

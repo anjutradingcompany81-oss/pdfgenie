@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, CheckCircle2, KeyRound, Loader2, Search, ShieldCheck, Trash2, User } from "lucide-react";
+import { Ban, CheckCircle2, KeyRound, Loader2, Search, ShieldCheck, Sparkles, Trash2, User } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { PLAN_DISPLAY, type PlanKey } from "@/lib/plans/config";
 
@@ -15,6 +15,7 @@ type AdminUser = {
   createdAt: string;
   image: string | null;
   plan: PlanKey;
+  trialEndsAt: string | null;
 };
 
 export default function AdminUsersPage() {
@@ -81,6 +82,20 @@ export default function AdminUsersPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planKey }),
+      });
+      await loadUsers(search);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function grantTrial(user: AdminUser) {
+    setBusyId(user.id);
+    try {
+      await fetch(`/api/admin-dashboard/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grantTrial: true }),
       });
       await loadUsers(search);
     } finally {
@@ -211,6 +226,24 @@ export default function AdminUsersPage() {
                         </option>
                       ))}
                     </select>
+                    {user.trialEndsAt ? (
+                      <p className="mt-1 text-[11px] text-brand-brown-dark/70">
+                        Trial — ends {new Date(user.trialEndsAt).toLocaleDateString()}
+                      </p>
+                    ) : (
+                      user.plan === "FREE" && (
+                        <button
+                          type="button"
+                          data-hover="true"
+                          disabled={busyId === user.id}
+                          onClick={() => grantTrial(user)}
+                          className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-brand-blue-deep hover:underline"
+                        >
+                          <Sparkles size={10} />
+                          Grant 30-day Pro trial
+                        </button>
+                      )
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <span

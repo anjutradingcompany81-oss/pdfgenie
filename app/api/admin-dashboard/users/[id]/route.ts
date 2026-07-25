@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdminApi } from "@/lib/require-admin-api";
-import { setUserPlan } from "@/lib/plans/set-user-plan";
+import { setUserPlan, grantTrial } from "@/lib/plans/set-user-plan";
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).optional(),
   role: z.enum(["USER", "ADMIN"]).optional(),
   disabled: z.boolean().optional(),
   planKey: z.enum(["FREE", "PREMIUM", "ENTERPRISE"]).optional(),
+  grantTrial: z.literal(true).optional(),
 });
 
 export async function PATCH(
@@ -32,8 +33,12 @@ export async function PATCH(
     );
   }
 
-  const { planKey, ...userFields } = parsed.data;
-  if (planKey) await setUserPlan(id, planKey);
+  const { planKey, grantTrial: shouldGrantTrial, ...userFields } = parsed.data;
+  if (shouldGrantTrial) {
+    await grantTrial(id);
+  } else if (planKey) {
+    await setUserPlan(id, planKey);
+  }
 
   const user = Object.keys(userFields).length
     ? await prisma.user.update({ where: { id }, data: userFields })

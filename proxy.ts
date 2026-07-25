@@ -12,7 +12,10 @@ export default auth((req) => {
 
   const isAdminArea = nextUrl.pathname.startsWith("/admin/dashboard");
   const isAdminLogin = nextUrl.pathname === "/admin/dashboard/login";
-  const isUserArea = nextUrl.pathname.startsWith("/dashboard");
+  const isUserArea =
+    nextUrl.pathname.startsWith("/dashboard") ||
+    nextUrl.pathname === "/choose-plan" ||
+    nextUrl.pathname === "/auth/post-login";
 
   if (isAdminArea && !isAdminLogin) {
     if (!isLoggedIn || role !== "ADMIN") {
@@ -28,5 +31,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/dashboard/:path*", "/choose-plan", "/auth/post-login"],
 };
