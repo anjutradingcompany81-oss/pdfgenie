@@ -45,10 +45,6 @@ export function Hero() {
             Every PDF task, one calm tool
           </motion.h1>
 
-          <motion.div variants={fadeUp} className="mt-6 max-w-xl">
-            <SearchTools variant="light" size="lg" className="w-full" />
-          </motion.div>
-
           <motion.p
             variants={fadeUp}
             className="mt-5 max-w-xl text-base text-brand-brown-dark/70 sm:text-lg"
@@ -105,6 +101,15 @@ export function Hero() {
           </div>
         </div>
       </div>
+
+      <motion.div
+        initial={reduceMotion ? undefined : "hidden"}
+        animate={reduceMotion ? undefined : "show"}
+        variants={fadeUp}
+        className="mx-auto mt-10 w-full max-w-2xl text-center lg:mt-14"
+      >
+        <SearchTools variant="light" size="lg" className="w-full" />
+      </motion.div>
     </section>
   );
 }

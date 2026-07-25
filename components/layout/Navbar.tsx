@@ -10,7 +10,6 @@ import { MagneticButton } from "@/components/ui/MagneticButton";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 import { ToolsMegaMenu } from "@/components/tools/ToolsMegaMenu";
-import { SearchTools } from "@/components/tools/SearchTools";
 
 const MARKETING_LINKS = [
   { href: "/#features", label: "Features" },
@@ -41,81 +40,73 @@ export function Navbar() {
             : "bg-transparent py-6"
         }`}
       >
-        <nav className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 lg:px-10">
-          <div className="flex min-w-0 items-center gap-4 xl:gap-6">
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- plain anchor is required so SmoothScroll's own click handler can smooth-scroll same-page, and fall back to a real navigation from other routes */}
-            <a
-              href="/#top"
-              data-hover="true"
-              className="shrink-0 text-lg font-bold tracking-tight text-brand-brown-dark"
-            >
-              PDF<span className="text-brand-blue">Genie</span>
-            </a>
+        <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 lg:px-10">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- plain anchor is required so SmoothScroll's own click handler can smooth-scroll same-page, and fall back to a real navigation from other routes */}
+          <a
+            href="/#top"
+            data-hover="true"
+            className="shrink-0 text-lg font-bold tracking-tight text-brand-brown-dark"
+          >
+            PDF<span className="text-brand-blue">Genie</span>
+          </a>
 
-            <div className="hidden min-w-0 items-center gap-4 xl:gap-6 lg:flex">
-              {MARKETING_LINKS.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
+          <div className="hidden min-w-0 flex-1 items-center justify-start gap-4 pl-8 xl:gap-6 xl:pl-10 lg:flex">
+            {MARKETING_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                data-hover="true"
+                className="group relative shrink-0 text-sm font-semibold text-brand-brown-dark"
+              >
+                {link.label}
+                <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
+              </a>
+            ))}
+
+            <ToolsMegaMenu activeHref={pathname} />
+          </div>
+
+          <div className="hidden shrink-0 items-center gap-5 lg:flex">
+            <ThemeSwitcher />
+            {isLoading ? (
+              <div className="h-9 w-24 animate-pulse rounded-full bg-brand-brown-dark/10" aria-label="Checking sign-in status" role="status" />
+            ) : isAuthed ? (
+              <UserMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} />
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  data-hover="true"
+                  className="text-sm font-semibold text-brand-brown-dark hover:text-brand-blue-deep"
+                >
+                  Log in
+                </Link>
+                <MagneticButton href="/signup" className="px-6 py-3 text-xs">
+                  Sign up
+                </MagneticButton>
+                <Link
+                  href="/admin/dashboard/login"
                   data-hover="true"
                   className="group relative shrink-0 text-sm font-semibold text-brand-brown-dark"
                 >
-                  {link.label}
+                  Admin
                   <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
-                </a>
-              ))}
-
-              <ToolsMegaMenu activeHref={pathname} />
-            </div>
+                </Link>
+              </>
+            )}
           </div>
 
-          <div className="hidden justify-self-center lg:flex">
-            <SearchTools />
-          </div>
-
-          <div className="flex items-center justify-end gap-5">
-            <div className="hidden items-center gap-5 lg:flex">
-              <ThemeSwitcher />
-              {isLoading ? (
-                <div className="h-9 w-24 animate-pulse rounded-full bg-brand-brown-dark/10" aria-label="Checking sign-in status" role="status" />
-              ) : isAuthed ? (
-                <UserMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} />
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    data-hover="true"
-                    className="text-sm font-semibold text-brand-brown-dark hover:text-brand-blue-deep"
-                  >
-                    Log in
-                  </Link>
-                  <MagneticButton href="/signup" className="px-6 py-3 text-xs">
-                    Sign up
-                  </MagneticButton>
-                  <Link
-                    href="/admin/dashboard/login"
-                    data-hover="true"
-                    className="group relative shrink-0 text-sm font-semibold text-brand-brown-dark"
-                  >
-                    Admin
-                    <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-brand-blue transition-all duration-300 group-hover:w-full" />
-                  </Link>
-                </>
-              )}
-            </div>
-
-            <button
-              type="button"
-              data-hover="true"
-              onClick={() => setMenuOpen(true)}
-              className="flex h-10 w-10 shrink-0 flex-col items-center justify-center gap-1.5 lg:hidden"
-              aria-label="Open menu"
-              aria-expanded={menuOpen}
-            >
-              <span className="h-0.5 w-6 bg-brand-brown-dark" />
-              <span className="h-0.5 w-6 bg-brand-brown-dark" />
-            </button>
-          </div>
+          <button
+            type="button"
+            data-hover="true"
+            onClick={() => setMenuOpen(true)}
+            className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 lg:hidden"
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+          >
+            <span className="h-0.5 w-6 bg-brand-brown-dark" />
+            <span className="h-0.5 w-6 bg-brand-brown-dark" />
+          </button>
         </nav>
       </motion.header>
 
