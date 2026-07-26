@@ -85,6 +85,20 @@
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
 }
 
+/* Digital Signature tool's own visual identity — deliberately separate from
+   the brand-blue/brown/cream palette used everywhere else (see
+   app/tools/digital-signature). Scoped to .dsc-tool so it never leaks into
+   the rest of the site; only used within that page's own component tree. */
+.dsc-tool {
+  --color-dsc-primary: #2563eb;
+  --color-dsc-secondary: #1e40af;
+  --color-dsc-accent: #10b981;
+  --color-dsc-surface: #f8fafc;
+  --color-dsc-ink: #0f172a;
+  --color-dsc-ink-muted: #64748b;
+  --color-dsc-border: #e2e8f0;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -102,6 +116,13 @@
   --radius-card: var(--radius-card);
   --shadow-card: var(--shadow-card);
   --font-poppins: var(--font-poppins);
+  --color-dsc-primary: var(--color-dsc-primary);
+  --color-dsc-secondary: var(--color-dsc-secondary);
+  --color-dsc-accent: var(--color-dsc-accent);
+  --color-dsc-surface: var(--color-dsc-surface);
+  --color-dsc-ink: var(--color-dsc-ink);
+  --color-dsc-ink-muted: var(--color-dsc-ink-muted);
+  --color-dsc-border: var(--color-dsc-border);
   --animate-marquee: marquee 30s linear infinite;
   --animate-marquee-fast: marquee 16s linear infinite;
   --animate-blob: blob 18s ease-in-out infinite;

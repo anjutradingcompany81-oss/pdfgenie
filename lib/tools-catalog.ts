@@ -33,6 +33,7 @@ import {
   Languages,
   AudioLines,
   Captions,
+  FileSignature,
 } from "lucide-react";
 import type { Tool } from "@/components/tools/ToolCard";
 
@@ -66,6 +67,12 @@ export const CORE_TOOLS: Tool[] = [
     icon: PenTool,
     title: "E-sign",
     copy: "Draw or type a signature and place it on the page.",
+  },
+  {
+    href: "/tools/digital-signature",
+    icon: FileSignature,
+    title: "Digital Signature (DSC)",
+    copy: "Sign PDFs with a real certificate (.pfx/.p12) — placement, appearance, and security, all in your browser.",
   },
   {
     href: "/tools/password-protect",

@@ -64,7 +64,7 @@ export const toolCategories: ToolCategory[] = [
   },
   {
     category: "Security",
-    tools: [tool("/tools/password-protect")],
+    tools: [tool("/tools/password-protect"), tool("/tools/digital-signature")],
   },
   {
     category: "More Tools",
