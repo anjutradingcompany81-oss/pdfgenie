@@ -443,6 +443,7 @@ export default function MailMergePage() {
                     onCancel={handleCancelToAuth}
                     onNext={() => setComposeStep("attachments")}
                     nextDisabled={!recipients}
+                    nextLabel="Next"
                   />
                 </div>
               )}
@@ -523,6 +524,7 @@ export default function MailMergePage() {
                     onCancel={reset}
                     onNext={() => setComposeStep("composer")}
                     nextDisabled={!validationReady}
+                    nextLabel="Next"
                   />
                 </div>
               )}
