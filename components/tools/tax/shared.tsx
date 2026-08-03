@@ -1,7 +1,6 @@
 "use client";
 
-import { Fragment, useState, type ReactNode } from "react";
-import type { CtcBreakdown } from "@/lib/tax/engine";
+import { useState, type ReactNode } from "react";
 
 // Native <input type="number"> doesn't strip a leading zero while you're
 // still typing (e.g. "0" then "2000000" stays "02000000" until blur in most
@@ -325,92 +324,3 @@ export function CompareBar({ label, valueA, valueB, labelA, labelB, format }: {
   );
 }
 
-export type BifurcationRow = { label: string; amount: number };
-export type BifurcationSection = { title: string; rows: BifurcationRow[] };
-
-export function buildCtcBifurcationSections(ctc: CtcBreakdown): BifurcationSection[] {
-  const dynamicByCategory = (category: "FIXED" | "REIMBURSEMENT" | "RETIRAL" | "OTHER") =>
-    ctc.dynamicComponents.filter((c) => c.category === category && c.amount > 0).map((c) => ({ label: c.label, amount: c.amount }));
-
-  return [
-    {
-      title: "Fixed components",
-      rows: [
-        { label: "Basic Salary", amount: ctc.basic },
-        { label: "HRA", amount: ctc.hra },
-        { label: "Special Allowance", amount: Math.max(0, ctc.specialAllowance) },
-        ...dynamicByCategory("FIXED"),
-      ],
-    },
-    {
-      title: "Reimbursements & allowances",
-      rows: [
-        ...(ctc.car > 0 ? [{ label: "Car Allowance", amount: ctc.car }] : []),
-        ...(ctc.lta > 0 ? [{ label: "LTA", amount: ctc.lta }] : []),
-        ...dynamicByCategory("REIMBURSEMENT"),
-      ],
-    },
-    {
-      title: "Retiral benefits (employer cost)",
-      rows: [
-        { label: "Employer PF", amount: ctc.employerPf },
-        { label: "Gratuity", amount: ctc.gratuity },
-        ...(ctc.employerNps > 0 ? [{ label: "Employer NPS", amount: ctc.employerNps }] : []),
-        ...dynamicByCategory("RETIRAL"),
-      ],
-    },
-    {
-      title: "Other employer cost",
-      rows: dynamicByCategory("OTHER"),
-    },
-  ];
-}
-
-export function CtcBifurcationTable({
-  sections,
-  total,
-  totalLabel = "Total Annual CTC",
-  format,
-}: {
-  sections: BifurcationSection[];
-  total: number;
-  totalLabel?: string;
-  format: (n: number) => string;
-}) {
-  const visibleSections = sections.filter((s) => s.rows.length > 0);
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-brand-brown-dark/10">
-      <table className="w-full border-collapse text-xs">
-        <tbody>
-          {visibleSections.map((section) => {
-            const subtotal = section.rows.reduce((sum, r) => sum + r.amount, 0);
-            return (
-              <Fragment key={section.title}>
-                <tr className="bg-brand-blue/5">
-                  <td colSpan={2} className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-brand-blue-deep">
-                    {section.title}
-                  </td>
-                </tr>
-                {section.rows.map((row) => (
-                  <tr key={row.label} className="border-t border-brand-brown-dark/5">
-                    <td className="px-3 py-1 text-brand-brown-dark/80">{row.label}</td>
-                    <td className="px-3 py-1 text-right tabular-nums text-brand-brown-dark">{format(row.amount)}</td>
-                  </tr>
-                ))}
-                <tr className="border-t border-brand-brown-dark/10">
-                  <td className="px-3 py-1 text-right text-[11px] font-semibold text-brand-brown-dark/55">Subtotal</td>
-                  <td className="px-3 py-1 text-right text-[11px] font-semibold tabular-nums text-brand-brown-dark/80">{format(subtotal)}</td>
-                </tr>
-              </Fragment>
-            );
-          })}
-          <tr className="border-t-2 border-brand-brown-dark/20 bg-brand-brown-dark/5">
-            <td className="px-3 py-2 text-sm font-bold text-brand-brown-dark">{totalLabel}</td>
-            <td className="px-3 py-2 text-right text-sm font-bold tabular-nums text-brand-brown-dark">{format(total)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
-}

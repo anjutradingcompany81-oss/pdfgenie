@@ -5,7 +5,7 @@ import { Download, FileSpreadsheet, TrendingDown, AlertTriangle } from "lucide-r
 import type { ComparisonResult, TaxRegime } from "@/lib/tax/engine";
 import { formatINR, formatPercent } from "@/lib/tax/format";
 import { MagneticButton } from "@/components/ui/MagneticButton";
-import { SectionCard, DonutChart, CompareBar, CtcBifurcationTable, buildCtcBifurcationSections } from "./shared";
+import { SectionCard, DonutChart, CompareBar } from "./shared";
 
 function RegimeStat({ label, oldValue, newValue }: { label: string; oldValue: number; newValue: number }) {
   return (
@@ -35,8 +35,6 @@ export function ResultsStep({
 
   const recommended = result[result.recommendedRegime === "OLD" ? "old" : "new"];
   const other = result[result.recommendedRegime === "OLD" ? "new" : "old"];
-
-  const ctcBifurcationSections = buildCtcBifurcationSections(result.ctc);
 
   async function handleDownload(kind: "pdf" | "excel") {
     setDownloading(kind);
@@ -141,10 +139,6 @@ export function ResultsStep({
           </div>
         </SectionCard>
       </div>
-
-      <SectionCard title="CTC bifurcation" description="Every component that makes up the total, grouped the way a payroll sheet would show it.">
-        <CtcBifurcationTable sections={ctcBifurcationSections} total={result.ctc.totalAnnualCtc} format={formatINR} />
-      </SectionCard>
 
       <SectionCard title="Why CTC ≠ gross salary ≠ take-home">
         <div className="grid gap-3 text-sm sm:grid-cols-3">
