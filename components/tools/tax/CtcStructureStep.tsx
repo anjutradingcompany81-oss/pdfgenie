@@ -10,7 +10,7 @@ import {
   type DynamicComponentCategory,
 } from "@/lib/tax/engine";
 import { formatINR } from "@/lib/tax/format";
-import { NumberField, SectionCard, ToggleRow, NumericInput, CtcBifurcationTable, buildCtcBifurcationSections } from "./shared";
+import { NumberField, SectionCard, ToggleRow, NumericInput } from "./shared";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -315,10 +315,6 @@ export function CtcStructureStep({
             , exceeding the ₹7,50,000 combined threshold — {formatINR(breakdown.taxableExcessRetirals)} is added back as a taxable perquisite.
           </p>
         )}
-      </SectionCard>
-
-      <SectionCard title="CTC bifurcation" description="Live breakdown of everything above, grouped the way a payroll sheet would show it.">
-        <CtcBifurcationTable sections={buildCtcBifurcationSections(breakdown)} total={breakdown.totalAnnualCtc} format={formatINR} />
       </SectionCard>
     </div>
   );
