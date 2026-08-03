@@ -31,16 +31,27 @@ export function CtcStructureStep({
 
       <SectionCard title="Fixed components">
         <div className="grid gap-4 sm:grid-cols-2">
-          <NumberField label="Basic Salary — % of CTC" value={ctc.basicPercentOfCtc} onChange={(v) => onChange({ ...ctc, basicPercentOfCtc: v })} suffix="%" max={100} />
-          <NumberField label="HRA — % of Basic" value={ctc.hraPercentOfBasic} onChange={(v) => onChange({ ...ctc, hraPercentOfBasic: v })} suffix="%" max={100} />
+          <NumberField
+            label="Basic Salary — % of CTC"
+            value={ctc.basicPercentOfCtc}
+            onChange={(v) => onChange({ ...ctc, basicPercentOfCtc: v })}
+            suffix="%"
+            max={100}
+            hint={`= ${formatINR(breakdown.basic)} / year`}
+          />
+          <NumberField
+            label="HRA — % of Basic"
+            value={ctc.hraPercentOfBasic}
+            onChange={(v) => onChange({ ...ctc, hraPercentOfBasic: v })}
+            suffix="%"
+            max={100}
+            hint={`= ${formatINR(breakdown.hra)} / year`}
+          />
           <NumberField label="Variable Pay (annual)" value={ctc.variablePay} onChange={(v) => onChange({ ...ctc, variablePay: v })} />
           <NumberField label="Bonus (annual)" value={ctc.bonus} onChange={(v) => onChange({ ...ctc, bonus: v })} />
           <NumberField label="Dearness Allowance (annual)" value={ctc.dearnessAllowance} onChange={(v) => onChange({ ...ctc, dearnessAllowance: v })} />
           <NumberField label="Other Allowance (annual)" value={ctc.otherAllowance} onChange={(v) => onChange({ ...ctc, otherAllowance: v })} />
         </div>
-        <p className="mt-3 text-xs text-brand-brown-dark/55">
-          Basic: {formatINR(breakdown.basic)} · HRA: {formatINR(breakdown.hra)}
-        </p>
       </SectionCard>
 
       <SectionCard title="Reimbursements" description="Nothing here is assumed tax-exempt — enable only what applies, and declare eligible exempt amounts in the next step.">
@@ -94,7 +105,13 @@ export function CtcStructureStep({
             onChange={(v) => onChange({ ...ctc, gratuityOverride: v })}
             hint={`Default: 4.81% of Basic = ${formatINR(breakdown.gratuity)}`}
           />
-          <NumberField label="Employer NPS — % of Basic" value={ctc.employerNpsPercentOfBasic} onChange={(v) => onChange({ ...ctc, employerNpsPercentOfBasic: v })} suffix="%" />
+          <NumberField
+            label="Employer NPS — % of Basic"
+            value={ctc.employerNpsPercentOfBasic}
+            onChange={(v) => onChange({ ...ctc, employerNpsPercentOfBasic: v })}
+            suffix="%"
+            hint={`= ${formatINR(breakdown.employerNps)} / year`}
+          />
           <NumberField label="Superannuation (annual)" value={ctc.superannuation} onChange={(v) => onChange({ ...ctc, superannuation: v })} />
         </div>
         {breakdown.taxableExcessRetirals > 0 && (
