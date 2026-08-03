@@ -111,6 +111,7 @@ export type CtcStructureInput = {
   employerPfOverride: number | null;
   gratuityOverride: number | null;
   employerNpsPercentOfBasic: number;
+  employerNpsOverride: number | null;
   superannuation: number;
   otherEmployerCost: number;
 };
@@ -201,6 +202,7 @@ export function createDefaultInput(): CalculatorInput {
       employerPfOverride: null,
       gratuityOverride: null,
       employerNpsPercentOfBasic: 0,
+      employerNpsOverride: null,
       superannuation: 0,
       otherEmployerCost: 0,
     },
@@ -297,7 +299,7 @@ export function buildCtcStructure(
   const employeePf = round(pfWageBase * rules.payroll.employeePfPercentOfBasic);
   const employerPf = round(ctc.employerPfOverride ?? pfWageBase * rules.payroll.employerPfPercentOfBasic);
   const gratuity = round(ctc.gratuityOverride ?? basic * rules.payroll.gratuityPercentOfBasic);
-  const employerNps = round(basic * (ctc.employerNpsPercentOfBasic / 100));
+  const employerNps = round(ctc.employerNpsOverride ?? basic * (ctc.employerNpsPercentOfBasic / 100));
   const superannuation = round(ctc.superannuation);
   const otherEmployerCost = round(ctc.otherEmployerCost);
 

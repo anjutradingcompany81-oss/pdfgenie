@@ -55,6 +55,53 @@ export function NumberField({
   );
 }
 
+export function PercentAmountField({
+  label,
+  percent,
+  amount,
+  onPercentChange,
+  onAmountChange,
+  hint,
+}: {
+  label: string;
+  percent: number;
+  amount: number;
+  onPercentChange: (value: number) => void;
+  onAmountChange: (value: number) => void;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <span className="mb-2 block text-sm font-semibold text-brand-brown-dark">{label}</span>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="relative">
+          <input
+            type="number"
+            value={Number.isFinite(percent) ? percent : 0}
+            min={0}
+            onChange={(e) => onPercentChange(e.target.value === "" ? 0 : Number(e.target.value))}
+            aria-label={`${label} — percent`}
+            className="w-full rounded-full border border-brand-brown-dark/15 bg-white px-5 py-3 text-sm text-brand-brown-dark focus:border-brand-blue focus:outline-none"
+          />
+          <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xs font-semibold text-brand-brown-dark/50">%</span>
+        </div>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-xs font-semibold text-brand-brown-dark/50">₹</span>
+          <input
+            type="number"
+            value={Number.isFinite(amount) ? amount : 0}
+            min={0}
+            onChange={(e) => onAmountChange(e.target.value === "" ? 0 : Number(e.target.value))}
+            aria-label={`${label} — amount`}
+            className="w-full rounded-full border border-brand-brown-dark/15 bg-white py-3 pl-8 pr-5 text-sm text-brand-brown-dark focus:border-brand-blue focus:outline-none"
+          />
+        </div>
+      </div>
+      {hint && <span className="mt-1 block text-xs text-brand-brown-dark/55">{hint}</span>}
+    </div>
+  );
+}
+
 export function SelectField<T extends string>({
   label,
   value,

@@ -3,7 +3,11 @@
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import type { CtcStructureInput, CtcBreakdown, ReimbursementComponent } from "@/lib/tax/engine";
 import { formatINR } from "@/lib/tax/format";
-import { NumberField, SectionCard, ToggleRow, CheckboxRow } from "./shared";
+import { NumberField, SectionCard, ToggleRow, CheckboxRow, PercentAmountField } from "./shared";
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
 
 export function CtcStructureStep({
   ctc,
@@ -23,6 +27,10 @@ export function CtcStructureStep({
 
   const carReimbursement = ctc.reimbursements.find((r) => r.key === "car");
 
+  const basicPercent = ctc.totalAnnualCtc > 0 ? round2((breakdown.basic / ctc.totalAnnualCtc) * 100) : ctc.basicPercentOfCtc;
+  const hraPercent = breakdown.basic > 0 ? round2((breakdown.hra / breakdown.basic) * 100) : ctc.hraPercentOfBasic;
+  const employerNpsPercent = breakdown.basic > 0 ? round2((breakdown.employerNps / breakdown.basic) * 100) : ctc.employerNpsPercentOfBasic;
+
   return (
     <div className="space-y-5">
       <SectionCard title="Total CTC" description="Every component below is carved out of this figure. Special Allowance always absorbs the balance.">
@@ -31,21 +39,19 @@ export function CtcStructureStep({
 
       <SectionCard title="Fixed components">
         <div className="grid gap-4 sm:grid-cols-2">
-          <NumberField
-            label="Basic Salary — % of CTC"
-            value={ctc.basicPercentOfCtc}
-            onChange={(v) => onChange({ ...ctc, basicPercentOfCtc: v })}
-            suffix="%"
-            max={100}
-            hint={`= ${formatINR(breakdown.basic)} / year`}
+          <PercentAmountField
+            label="Basic Salary"
+            percent={basicPercent}
+            amount={breakdown.basic}
+            onPercentChange={(v) => onChange({ ...ctc, basicPercentOfCtc: v, basicOverride: null })}
+            onAmountChange={(v) => onChange({ ...ctc, basicOverride: v })}
           />
-          <NumberField
-            label="HRA — % of Basic"
-            value={ctc.hraPercentOfBasic}
-            onChange={(v) => onChange({ ...ctc, hraPercentOfBasic: v })}
-            suffix="%"
-            max={100}
-            hint={`= ${formatINR(breakdown.hra)} / year`}
+          <PercentAmountField
+            label="HRA"
+            percent={hraPercent}
+            amount={breakdown.hra}
+            onPercentChange={(v) => onChange({ ...ctc, hraPercentOfBasic: v, hraOverride: null })}
+            onAmountChange={(v) => onChange({ ...ctc, hraOverride: v })}
           />
           <NumberField label="Variable Pay (annual)" value={ctc.variablePay} onChange={(v) => onChange({ ...ctc, variablePay: v })} />
           <NumberField label="Bonus (annual)" value={ctc.bonus} onChange={(v) => onChange({ ...ctc, bonus: v })} />
@@ -105,12 +111,12 @@ export function CtcStructureStep({
             onChange={(v) => onChange({ ...ctc, gratuityOverride: v })}
             hint={`Default: 4.81% of Basic = ${formatINR(breakdown.gratuity)}`}
           />
-          <NumberField
-            label="Employer NPS — % of Basic"
-            value={ctc.employerNpsPercentOfBasic}
-            onChange={(v) => onChange({ ...ctc, employerNpsPercentOfBasic: v })}
-            suffix="%"
-            hint={`= ${formatINR(breakdown.employerNps)} / year`}
+          <PercentAmountField
+            label="Employer NPS"
+            percent={employerNpsPercent}
+            amount={breakdown.employerNps}
+            onPercentChange={(v) => onChange({ ...ctc, employerNpsPercentOfBasic: v, employerNpsOverride: null })}
+            onAmountChange={(v) => onChange({ ...ctc, employerNpsOverride: v })}
           />
           <NumberField label="Superannuation (annual)" value={ctc.superannuation} onChange={(v) => onChange({ ...ctc, superannuation: v })} />
         </div>
