@@ -34,6 +34,15 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  async redirects() {
+    return [
+      // "Remove pages" and "Delete pages" were the same tool under two
+      // names; "Add text" was a strict subset of Edit PDF's own text tool.
+      // Consolidated — these keep old links/bookmarks working.
+      { source: "/tools/remove-pages", destination: "/tools/delete-pages", permanent: true },
+      { source: "/tools/add-text", destination: "/tools/edit-pdf", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

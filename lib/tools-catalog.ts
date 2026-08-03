@@ -5,12 +5,10 @@ import {
   RefreshCw,
   PenTool,
   FileInput,
-  FileMinus2,
   FileX2,
   Lock,
   Stamp,
   Scaling,
-  Type,
   FileType,
   Images,
   FileUp,
@@ -34,6 +32,10 @@ import {
   AudioLines,
   Captions,
   FileSignature,
+  FileDiff,
+  ScanSearch,
+  Signature,
+  Calculator,
 } from "lucide-react";
 import type { Tool } from "@/components/tools/ToolCard";
 
@@ -75,6 +77,12 @@ export const CORE_TOOLS: Tool[] = [
     copy: "Sign PDFs with a real certificate (.pfx/.p12) — placement, appearance, and security, all in your browser.",
   },
   {
+    href: "/tools/request-signature",
+    icon: Signature,
+    title: "Request a Signature",
+    copy: "Mark where a signature goes and share a link — anyone with it can open and sign, no account needed.",
+  },
+  {
     href: "/tools/password-protect",
     icon: Lock,
     title: "Password Protection",
@@ -86,6 +94,18 @@ export const CORE_TOOLS: Tool[] = [
     title: "Edit PDF",
     copy: "Drop text anywhere on the page — add as many notes as you need.",
   },
+  {
+    href: "/tools/compare-pdf",
+    icon: FileDiff,
+    title: "Compare PDFs",
+    copy: "See exactly what changed between two versions of a document, page by page.",
+  },
+  {
+    href: "/tools/pdfa-check",
+    icon: ScanSearch,
+    title: "PDF/A Compliance Check",
+    copy: "Check fonts, encryption, and metadata against the most common PDF/A-1b archival requirements.",
+  },
 ];
 
 export const ORGANIZE_TOOLS: Tool[] = [
@@ -96,16 +116,10 @@ export const ORGANIZE_TOOLS: Tool[] = [
     copy: "Drop the pages of one PDF into another, right where you want them.",
   },
   {
-    href: "/tools/remove-pages",
-    icon: FileMinus2,
-    title: "Remove pages",
-    copy: "Select pages you don't need and get back a cleaner PDF.",
-  },
-  {
     href: "/tools/delete-pages",
     icon: FileX2,
     title: "Delete pages",
-    copy: "Pick pages to delete and download the rest.",
+    copy: "Pick pages you don't need and download a clean PDF without them.",
   },
   {
     href: "/tools/watermark",
@@ -118,12 +132,6 @@ export const ORGANIZE_TOOLS: Tool[] = [
     icon: Scaling,
     title: "Resize PDF",
     copy: "Rescale every page to a new paper size.",
-  },
-  {
-    href: "/tools/add-text",
-    icon: Type,
-    title: "Add text",
-    copy: "Type a line of text and click where it should go.",
   },
   {
     href: "/tools/rotate-pdf",
@@ -196,16 +204,19 @@ export const CONVERT_TOOLS: Tool[] = [
   },
 ];
 
-export const AUTOMATE_TOOLS: Tool[] = [
+export const MORE_TOOLS: Tool[] = [
   {
     href: "/tools/mail-merge",
     icon: Mail,
     title: "Mail Merge",
     copy: "Send personalized emails to a list from Excel, with PDF attachments. Free plan: 30 emails/job.",
   },
-];
-
-export const MORE_TOOLS: Tool[] = [
+  {
+    href: "/tools/income-tax-calculator",
+    icon: Calculator,
+    title: "Income Tax Calculator",
+    copy: "Build your CTC structure and compare old vs. new tax regime — take-home, TDS, and a downloadable report.",
+  },
   {
     href: "/tools/merge-images",
     icon: GalleryHorizontal,

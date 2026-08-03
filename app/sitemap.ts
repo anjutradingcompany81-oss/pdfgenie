@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, AUTOMATE_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
+import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
 import { SITE_URL } from "@/lib/site";
 
 const STATIC_ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
@@ -15,7 +15,7 @@ const STATIC_ROUTES: { path: string; priority: number; changeFrequency: Metadata
   { path: "/signup", priority: 0.2, changeFrequency: "yearly" },
 ];
 
-const ALL_TOOLS = [...CORE_TOOLS, ...ORGANIZE_TOOLS, ...CONVERT_TOOLS, ...AUTOMATE_TOOLS, ...MORE_TOOLS];
+const ALL_TOOLS = [...CORE_TOOLS, ...ORGANIZE_TOOLS, ...CONVERT_TOOLS, ...MORE_TOOLS];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

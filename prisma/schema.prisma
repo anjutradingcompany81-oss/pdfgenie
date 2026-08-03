@@ -24,15 +24,16 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts       Account[]
-  sessions       Session[]
-  resetTokens    PasswordResetToken[]
-  toolUsage      ToolUsageEvent[]
-  subscription   Subscription?
-  billingHistory BillingHistory[]
-  mailMergeJobs  MailMergeJob[]
-  emailTemplates EmailTemplate[]
-  smtpCredential SmtpCredential?
+  accounts          Account[]
+  sessions          Session[]
+  resetTokens       PasswordResetToken[]
+  toolUsage         ToolUsageEvent[]
+  subscription      Subscription?
+  billingHistory    BillingHistory[]
+  mailMergeJobs     MailMergeJob[]
+  emailTemplates    EmailTemplate[]
+  smtpCredential    SmtpCredential?
+  signatureRequests SignatureRequest[]
 
   @@map("users")
 }
@@ -370,4 +371,47 @@ model SmtpCredential {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("smtp_credentials")
+}
+
+enum SignatureRequestStatus {
+  PENDING
+  SIGNED
+  CANCELLED
+}
+
+// A shareable, no-login signing link: the sender places where a signature
+// should go, we store the PDF, and anyone holding the link can open and
+// sign it. `token` is the only access control — there are no recipient
+// accounts, matching the "simple, no email delivery" scope this shipped
+// with. This is the one feature in the app that stores a file server-side;
+// every other tool processes entirely client-side and never uploads
+// anything (see lib/uploads.ts).
+model SignatureRequest {
+  id           String                 @id @default(cuid())
+  userId       String?
+  anonymousId  String?
+  token        String                 @unique @default(cuid())
+  status       SignatureRequestStatus @default(PENDING)
+  fileName     String
+  // Filenames under uploads/signature-requests/ (see lib/uploads.ts) — never
+  // a full path, so the serving route stays traversal-safe.
+  sourceFile   String
+  signedFile   String?
+  // Where the recipient's signature gets flattened in, chosen by the sender
+  // before sharing the link (same ratio/point convention as lib/pdf/sign.ts).
+  pageIndex    Int
+  xRatio       Float
+  yRatio       Float
+  wRatio       Float
+  hRatio       Float
+  pageWidthPt  Float
+  pageHeightPt Float
+  createdAt    DateTime               @default(now())
+  signedAt     DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([anonymousId])
+  @@map("signature_requests")
 }

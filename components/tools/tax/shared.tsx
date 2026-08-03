@@ -1,0 +1,219 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+export function SectionCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <div className="rounded-3xl border border-brand-brown-dark/10 bg-white p-5 sm:p-6">
+      <h3 className="text-base font-bold text-brand-brown-dark">{title}</h3>
+      {description && <p className="mt-1 text-sm text-brand-brown-dark/65">{description}</p>}
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
+export function NumberField({
+  label,
+  value,
+  onChange,
+  suffix,
+  min = 0,
+  max,
+  step,
+  hint,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  suffix?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  hint?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-brand-brown-dark">{label}</span>
+      <div className="relative">
+        <input
+          type="number"
+          value={Number.isFinite(value) ? value : 0}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+          className="w-full rounded-full border border-brand-brown-dark/15 bg-white px-5 py-3 text-sm text-brand-brown-dark focus:border-brand-blue focus:outline-none"
+        />
+        {suffix && (
+          <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xs font-semibold text-brand-brown-dark/50">
+            {suffix}
+          </span>
+        )}
+      </div>
+      {hint && <span className="mt-1 block text-xs text-brand-brown-dark/55">{hint}</span>}
+    </label>
+  );
+}
+
+export function SelectField<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: string }[];
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-brand-brown-dark">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+        className="w-full rounded-full border border-brand-brown-dark/15 bg-white px-5 py-3 text-sm text-brand-brown-dark focus:border-brand-blue focus:outline-none"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+export function ToggleRow({
+  label,
+  description,
+  enabled,
+  onToggle,
+  children,
+}: {
+  label: string;
+  description?: string;
+  enabled: boolean;
+  onToggle: (enabled: boolean) => void;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-brand-brown-dark/10 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-brand-brown-dark">{label}</p>
+          {description && <p className="text-xs text-brand-brown-dark/55">{description}</p>}
+        </div>
+        <button
+          type="button"
+          data-hover="true"
+          role="switch"
+          aria-checked={enabled}
+          aria-label={`Toggle ${label}`}
+          onClick={() => onToggle(!enabled)}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${enabled ? "bg-brand-blue-deep" : "bg-brand-brown-dark/15"}`}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-5" : "translate-x-0.5"}`}
+          />
+        </button>
+      </div>
+      {enabled && children && <div className="mt-4">{children}</div>}
+    </div>
+  );
+}
+
+export function CheckboxRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2.5 text-sm text-brand-brown-dark">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 rounded border-brand-brown-dark/30 text-brand-blue-deep focus:ring-brand-blue"
+      />
+      {label}
+    </label>
+  );
+}
+
+const DONUT_COLORS = ["#2563eb", "#0d9488", "#f59e0b", "#a855f7", "#ec4899", "#64748b"];
+
+export function DonutChart({ segments, size = 160 }: { segments: { label: string; value: number }[]; size?: number }) {
+  const total = segments.reduce((s, seg) => s + Math.max(0, seg.value), 0);
+  const radius = size / 2 - 14;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="flex items-center gap-5">
+      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} className="shrink-0 -rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" className="text-brand-brown-dark/10" strokeWidth={16} />
+        {total > 0 &&
+          segments.map((seg, i) => {
+            if (seg.value <= 0) return null;
+            const fraction = seg.value / total;
+            const dash = fraction * circumference;
+            const circle = (
+              <circle
+                key={seg.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
+                strokeWidth={16}
+                strokeDasharray={`${dash} ${circumference - dash}`}
+                strokeDashoffset={-offset}
+                strokeLinecap="butt"
+              />
+            );
+            offset += dash;
+            return circle;
+          })}
+      </svg>
+      <ul className="space-y-1.5 text-xs">
+        {segments
+          .filter((s) => s.value > 0)
+          .map((seg, i) => (
+            <li key={seg.label} className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+              <span className="text-brand-brown-dark/70">{seg.label}</span>
+            </li>
+          ))}
+      </ul>
+    </div>
+  );
+}
+
+export function CompareBar({ label, valueA, valueB, labelA, labelB, format }: {
+  label: string;
+  valueA: number;
+  valueB: number;
+  labelA: string;
+  labelB: string;
+  format: (n: number) => string;
+}) {
+  const max = Math.max(valueA, valueB, 1);
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold text-brand-brown-dark/70">{label}</p>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <span className="w-16 shrink-0 text-[11px] text-brand-brown-dark/55">{labelA}</span>
+          <div className="h-3 flex-1 overflow-hidden rounded-full bg-brand-brown-dark/5">
+            <div className="h-full rounded-full bg-brand-blue" style={{ width: `${(valueA / max) * 100}%` }} />
+          </div>
+          <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-brand-brown-dark">{format(valueA)}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-16 shrink-0 text-[11px] text-brand-brown-dark/55">{labelB}</span>
+          <div className="h-3 flex-1 overflow-hidden rounded-full bg-brand-brown-dark/5">
+            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(valueB / max) * 100}%` }} />
+          </div>
+          <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-brand-brown-dark">{format(valueB)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}

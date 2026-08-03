@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   Highlighter,
   Eraser,
+  Ban,
   ImageIcon,
   Pencil,
   Undo2,
@@ -26,6 +27,7 @@ import { ToolShell } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
+import { EditPageThumbRail } from "@/components/tools/EditPageThumbRail";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { getPageCount, getPageSize, renderPageToCanvas } from "@/lib/pdf/pdfjs";
 import { downloadBlob, bytesToBlob } from "@/lib/pdf/download";
@@ -47,7 +49,7 @@ import {
 
 const PREVIEW_WIDTH = 640;
 
-type ToolId = "select" | "text" | "rectangle" | "ellipse" | "line" | "arrow" | "highlight" | "whiteout" | "image" | "draw";
+type ToolId = "select" | "text" | "rectangle" | "ellipse" | "line" | "arrow" | "highlight" | "cover" | "redact" | "image" | "draw";
 
 const TOOLS: { id: ToolId; label: string; icon: typeof MousePointer2 }[] = [
   { id: "select", label: "Select", icon: MousePointer2 },
@@ -57,7 +59,8 @@ const TOOLS: { id: ToolId; label: string; icon: typeof MousePointer2 }[] = [
   { id: "line", label: "Line", icon: Minus },
   { id: "arrow", label: "Arrow", icon: ArrowUpRight },
   { id: "highlight", label: "Highlight", icon: Highlighter },
-  { id: "whiteout", label: "Whiteout", icon: Eraser },
+  { id: "cover", label: "Cover", icon: Eraser },
+  { id: "redact", label: "Redact", icon: Ban },
   { id: "image", label: "Image", icon: ImageIcon },
   { id: "draw", label: "Draw", icon: Pencil },
 ];
@@ -73,6 +76,8 @@ const BLACK: RGB = { r: 0.09, g: 0.075, b: 0.06 };
 const BLUE: RGB = { r: 0.1, g: 0.3, b: 0.85 };
 const YELLOW: RGB = { r: 1, g: 0.92, b: 0.25 };
 const WHITE: RGB = { r: 1, g: 1, b: 1 };
+// Pure black, not the warm-tinted BLACK above — the universal redaction convention.
+const REDACT_BLACK: RGB = { r: 0, g: 0, b: 0 };
 
 type Style = {
   fontFamily: FontFamily;
@@ -123,7 +128,7 @@ function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-const BOX_DEFAULT_KINDS = new Set<BoxShapeKind>(["rectangle", "ellipse", "highlight", "whiteout"]);
+const BOX_DEFAULT_KINDS = new Set<BoxShapeKind>(["rectangle", "ellipse", "highlight", "cover", "redact"]);
 const LINE_KINDS = new Set<LineShapeKind>(["line", "arrow"]);
 
 type DragState =
@@ -372,15 +377,17 @@ export default function EditPdfPage() {
       const defaults =
         kind === "highlight"
           ? { fillColor: YELLOW as RGB | null, strokeColor: BLACK, strokeWidth: 0, opacity: 0.4, h: 0.045 }
-          : kind === "whiteout"
+          : kind === "cover"
             ? { fillColor: WHITE as RGB | null, strokeColor: BLACK, strokeWidth: 0, opacity: 1, h: 0.05 }
-            : {
-                fillColor: (style.fillEnabled ? style.fillColor : null) as RGB | null,
-                strokeColor: style.strokeColor,
-                strokeWidth: style.strokeWidth,
-                opacity: style.opacity,
-                h: 0.12,
-              };
+            : kind === "redact"
+              ? { fillColor: REDACT_BLACK as RGB | null, strokeColor: REDACT_BLACK, strokeWidth: 0, opacity: 1, h: 0.05 }
+              : {
+                  fillColor: (style.fillEnabled ? style.fillColor : null) as RGB | null,
+                  strokeColor: style.strokeColor,
+                  strokeWidth: style.strokeWidth,
+                  opacity: style.opacity,
+                  h: 0.12,
+                };
       const w = 0.22;
       const obj: ShapeObject = {
         id: newId(),
@@ -618,7 +625,7 @@ export default function EditPdfPage() {
     <ToolShell
       icon={FileEdit}
       title="Edit a PDF"
-      description="A full editing toolkit — text, shapes, highlights, whiteout, images, and freehand drawing, all on the page."
+      description="A full editing toolkit — text, shapes, highlights, cover-ups, real redaction, images, and freehand drawing, all on the page."
     >
       {!file && (
         <Dropzone accept="application/pdf" onFiles={handleFile} label="Drop a PDF here, or click to browse" />
@@ -725,21 +732,29 @@ export default function EditPdfPage() {
           {/* Property panel */}
           <PropertyPanel activeTool={activeTool} selected={selected} style={style} setStyle={setStyle} updateSelected={updateSelected} />
 
-          <div
-            ref={previewRef}
-            onClick={handleCanvasClick}
-            onPointerDown={handleCanvasPointerDown}
-            className={`relative mx-auto overflow-hidden rounded-xl border border-brand-brown-dark/10 bg-white shadow-sm ${
-              activeTool === "select" ? "" : "cursor-crosshair"
-            }`}
-            style={{
-              width: PREVIEW_WIDTH,
-              maxWidth: "100%",
-              aspectRatio: pageSizePt.width ? `${pageSizePt.width} / ${pageSizePt.height}` : undefined,
-              touchAction: "none",
-            }}
-          >
-            <div ref={canvasHost} className="absolute inset-0" />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+            <EditPageThumbRail
+              fileBuffer={buffer}
+              pageCount={pageCount}
+              activeIndex={pageIndex}
+              onSelect={setPageIndex}
+            />
+
+            <div
+              ref={previewRef}
+              onClick={handleCanvasClick}
+              onPointerDown={handleCanvasPointerDown}
+              className={`relative mx-auto overflow-hidden rounded-xl border border-brand-brown-dark/10 bg-white shadow-sm ${
+                activeTool === "select" ? "" : "cursor-crosshair"
+              }`}
+              style={{
+                width: PREVIEW_WIDTH,
+                maxWidth: "100%",
+                aspectRatio: pageSizePt.width ? `${pageSizePt.width} / ${pageSizePt.height}` : undefined,
+                touchAction: "none",
+              }}
+            >
+              <div ref={canvasHost} className="absolute inset-0" />
 
             {/* SVG overlay for lines, arrows, and freehand strokes */}
             <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${PREVIEW_WIDTH} ${previewHeight}`}>
@@ -874,13 +889,15 @@ export default function EditPdfPage() {
               }
 
               if (o.type === "shape" && isBoxShape(o)) {
-                const isPlain = o.kind === "highlight" || o.kind === "whiteout";
+                const isPlain = o.kind === "highlight" || o.kind === "cover" || o.kind === "redact";
                 return (
                   <div
                     key={o.id}
                     data-hover="true"
                     onPointerDown={(e) => beginObjectDrag(e, o)}
-                    className={`group absolute cursor-move touch-none select-none ${selectedId === o.id ? "outline outline-2 outline-brand-blue" : ""}`}
+                    className={`group absolute flex cursor-move touch-none select-none items-center justify-center ${
+                      selectedId === o.id ? "outline outline-2 outline-brand-blue" : o.kind === "redact" ? "outline outline-1 outline-dashed outline-status-danger" : ""
+                    }`}
                     style={{
                       left: o.xRatio * PREVIEW_WIDTH,
                       top: o.yRatio * previewHeight,
@@ -891,6 +908,11 @@ export default function EditPdfPage() {
                       borderRadius: o.kind === "ellipse" ? "50%" : undefined,
                     }}
                   >
+                    {o.kind === "redact" && o.hRatio * previewHeight > 12 && (
+                      <span className="pointer-events-none select-none text-[9px] font-bold uppercase tracking-wide text-white/70">
+                        Redact
+                      </span>
+                    )}
                     {selectedId === o.id && (
                       <div
                         onPointerDown={(e) => beginResizeBox(e, o.id)}
@@ -929,7 +951,8 @@ export default function EditPdfPage() {
                   lineHeight: 1.25,
                 }}
               />
-            )}
+              )}
+            </div>
           </div>
 
           <p className="text-xs text-brand-brown-dark/70">
@@ -986,7 +1009,17 @@ function PropertyPanel({
   const isBox = kind === "box" || (selected?.type === "shape" && isBoxShape(selected));
   const isLine = kind === "line" || (selected?.type === "shape" && isLineShape(selected));
   const isDraw = kind === "draw";
-  const isPlainBox = selected?.type === "shape" && isBoxShape(selected) && (selected.kind === "highlight" || selected.kind === "whiteout");
+  const isPlainBox = selected?.type === "shape" && isBoxShape(selected) && (selected.kind === "highlight" || selected.kind === "cover");
+  const isRedact = (selected?.type === "shape" && isBoxShape(selected) && selected.kind === "redact") || (!selected && activeTool === "redact");
+
+  if (isRedact) {
+    return (
+      <div className="flex items-center gap-2 rounded-2xl border border-status-danger/25 bg-status-danger/5 p-3 text-xs text-brand-brown-dark/70">
+        <Ban size={14} className="shrink-0 text-status-danger" />
+        Redaction is always solid black and permanently flattens that page — the covered content can&apos;t be recovered, and text on that page stops being selectable or searchable.
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-brown-dark/10 bg-brand-cream/50 p-3 text-xs">

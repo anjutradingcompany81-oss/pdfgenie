@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Reveal } from "@/components/ui/Reveal";
 import { ToolSection } from "@/components/tools/ToolSection";
-import { AUTOMATE_TOOLS, CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
+import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
 
 export function ToolsShowcase() {
   return (
@@ -15,17 +15,11 @@ export function ToolsShowcase() {
         </Reveal>
 
         <ToolSection
-          eyebrow="Automate"
-          title="Reach your whole list"
-          tools={AUTOMATE_TOOLS}
-          accent="from-fuchsia-500 to-pink-500"
-          className="mt-6"
-        />
-        <ToolSection
           eyebrow="Core tools"
           title="The essentials"
           tools={CORE_TOOLS}
           accent="from-brand-blue to-brand-blue-deep"
+          className="mt-6"
         />
         <ToolSection
           eyebrow="Organize PDF"

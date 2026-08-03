@@ -39,6 +39,7 @@
     "@tiptap/react": "^3.28.0",
     "@tiptap/starter-kit": "^3.28.0",
     "bcryptjs": "^3.0.3",
+    "diff": "^9.0.0",
     "docx": "^9.7.1",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.42.2",

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { SITE_URL } from "@/lib/site";
-import ToolClient from "./AddTextClient";
+import ToolClient from "./CompareClient";
 
-const TITLE = "Add text — PDF Genie";
-const DESCRIPTION = "Type a line of text and click where it should go.";
-const PATH = "/tools/add-text";
+const TITLE = "Compare PDFs — PDF Genie";
+const DESCRIPTION = "See exactly what changed between two versions of a PDF, page by page.";
+const PATH = "/tools/compare-pdf";
 
 export const metadata: Metadata = {
   title: TITLE,

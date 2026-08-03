@@ -1,5 +1,5 @@
 import type { Tool } from "@/components/tools/ToolCard";
-import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, AUTOMATE_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
+import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
 
 export type ToolCategory = {
   category: string;
@@ -10,7 +10,6 @@ const ALL_CATALOG_TOOLS = [
   ...CORE_TOOLS,
   ...ORGANIZE_TOOLS,
   ...CONVERT_TOOLS,
-  ...AUTOMATE_TOOLS,
   ...MORE_TOOLS,
 ];
 
@@ -23,7 +22,7 @@ function tool(href: string): Tool {
 
 /** Nav/search category grouping — a different, purpose-specific view of the
  * same tools shown on /tools and the homepage (which use their own
- * Core/Organize/Convert/Automate sections). */
+ * Core/Organize/Convert/More sections). */
 export const toolCategories: ToolCategory[] = [
   {
     category: "PDF Tools",
@@ -34,12 +33,13 @@ export const toolCategories: ToolCategory[] = [
       tool("/tools/rotate-pdf"),
       tool("/tools/watermark"),
       tool("/tools/resize-pdf"),
-      tool("/tools/add-text"),
       tool("/tools/sign"),
+      tool("/tools/request-signature"),
       tool("/tools/insert-pages"),
-      tool("/tools/remove-pages"),
       tool("/tools/delete-pages"),
       tool("/tools/edit-pdf"),
+      tool("/tools/compare-pdf"),
+      tool("/tools/pdfa-check"),
       tool("/tools/fill-pdf"),
       tool("/tools/organize-pdf"),
       tool("/tools/crop-pdf"),
@@ -59,16 +59,14 @@ export const toolCategories: ToolCategory[] = [
     ],
   },
   {
-    category: "Email Tools",
-    tools: [tool("/tools/mail-merge")],
-  },
-  {
     category: "Security",
     tools: [tool("/tools/password-protect"), tool("/tools/digital-signature")],
   },
   {
     category: "More Tools",
     tools: [
+      tool("/tools/mail-merge"),
+      tool("/tools/income-tax-calculator"),
       tool("/tools/merge-images"),
       tool("/tools/compress-images"),
       tool("/tools/enhance-images"),

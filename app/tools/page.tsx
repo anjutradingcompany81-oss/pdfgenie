@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
 import { ToolSection } from "@/components/tools/ToolSection";
-import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, AUTOMATE_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
+import { CORE_TOOLS, ORGANIZE_TOOLS, CONVERT_TOOLS, MORE_TOOLS } from "@/lib/tools-catalog";
 import { SITE_URL } from "@/lib/site";
 
 const TITLE = "All Tools — PDF Genie";
@@ -29,17 +29,11 @@ export default function ToolsPage() {
         </p>
 
         <ToolSection
-          eyebrow="Automate"
-          title="Reach your whole list"
-          tools={AUTOMATE_TOOLS}
-          accent="from-fuchsia-500 to-pink-500"
-          className="mt-8"
-        />
-        <ToolSection
           eyebrow="Core tools"
           title="The essentials"
           tools={CORE_TOOLS}
           accent="from-brand-blue to-brand-blue-deep"
+          className="mt-8"
         />
         <ToolSection
           eyebrow="Organize PDF"

@@ -1,4 +1,5 @@
 import { PDFDocument, PDFFont, StandardFonts, LineCapStyle, rgb, type RGB as PdfLibRGB } from "pdf-lib";
+import { loadPdfjs } from "@/lib/pdf/pdfjs";
 
 export type RGB = { r: number; g: number; b: number };
 
@@ -25,7 +26,7 @@ export type TextObject = {
   color: RGB;
 };
 
-export type BoxShapeKind = "rectangle" | "ellipse" | "highlight" | "whiteout";
+export type BoxShapeKind = "rectangle" | "ellipse" | "highlight" | "cover" | "redact";
 export type LineShapeKind = "line" | "arrow";
 export type ShapeKind = BoxShapeKind | LineShapeKind;
 
@@ -85,7 +86,13 @@ export type DrawObject = {
 export type EditObject = TextObject | ShapeObject | ImageObject | DrawObject;
 
 export function isBoxShape(shape: ShapeObject): shape is BoxShapeObject {
-  return shape.kind === "rectangle" || shape.kind === "ellipse" || shape.kind === "highlight" || shape.kind === "whiteout";
+  return (
+    shape.kind === "rectangle" ||
+    shape.kind === "ellipse" ||
+    shape.kind === "highlight" ||
+    shape.kind === "cover" ||
+    shape.kind === "redact"
+  );
 }
 
 export function isLineShape(shape: ShapeObject): shape is LineShapeObject {
@@ -197,7 +204,7 @@ export async function applyPdfEdits(bytes: ArrayBuffer, objects: EditObject[]): 
       const h = obj.hRatio * height;
       const y = height - obj.yRatio * height - h;
       const fill = obj.fillColor ? toPdfColor(obj.fillColor) : undefined;
-      const hasBorder = obj.strokeWidth > 0 && obj.kind !== "highlight" && obj.kind !== "whiteout";
+      const hasBorder = obj.strokeWidth > 0 && obj.kind !== "highlight" && obj.kind !== "cover" && obj.kind !== "redact";
       if (obj.kind === "ellipse") {
         page.drawEllipse({
           x: x + w / 2,
@@ -250,5 +257,86 @@ export async function applyPdfEdits(bytes: ArrayBuffer, objects: EditObject[]): 
     }
   }
 
+  const redactedPageIndices = [
+    ...new Set(
+      objects
+        .filter((o): o is BoxShapeObject => o.type === "shape" && isBoxShape(o) && o.kind === "redact")
+        .map((o) => o.pageIndex)
+    ),
+  ];
+
+  if (redactedPageIndices.length === 0) {
+    return doc.save();
+  }
+
+  // Real redaction: drawing a black box on the vector page (above) only
+  // covers it visually — the original text is still sitting in the content
+  // stream underneath and is trivially recoverable (select-all, or open in
+  // another viewer). To actually remove it, rasterize each redacted page
+  // from the ORIGINAL bytes — not a pdf-lib-resaved buffer, which pdfjs's
+  // parser doesn't reliably round-trip — and burn the redaction boxes
+  // directly onto that raster with the Canvas 2D API, then swap the vector
+  // page for the image. Non-redacted pages are untouched and stay fully
+  // vector/selectable.
+  const pdfjs = await loadPdfjs();
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice(0) });
+  const renderedDoc = await loadingTask.promise;
+
+  const redactBoxesByPage = new Map<number, BoxShapeObject[]>();
+  for (const o of objects) {
+    if (o.type === "shape" && isBoxShape(o) && o.kind === "redact") {
+      const list = redactBoxesByPage.get(o.pageIndex) ?? [];
+      list.push(o);
+      redactBoxesByPage.set(o.pageIndex, list);
+    }
+  }
+
+  const rasters = new Map<number, { jpegBytes: Uint8Array; width: number; height: number }>();
+  for (const pageIndex of redactedPageIndices) {
+    const renderedPage = await renderedDoc.getPage(pageIndex + 1);
+    const pointViewport = renderedPage.getViewport({ scale: 1 });
+    const renderViewport = renderedPage.getViewport({ scale: 2 });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = renderViewport.width;
+    canvas.height = renderViewport.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas not supported");
+    await renderedPage.render({ canvas, canvasContext: ctx, viewport: renderViewport }).promise;
+
+    ctx.fillStyle = "#000000";
+    for (const box of redactBoxesByPage.get(pageIndex) ?? []) {
+      ctx.fillRect(
+        box.xRatio * canvas.width,
+        box.yRatio * canvas.height,
+        box.wRatio * canvas.width,
+        box.hRatio * canvas.height
+      );
+    }
+
+    const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    rasters.set(pageIndex, {
+      jpegBytes: dataUrlToBytes(jpegDataUrl),
+      width: pointViewport.width,
+      height: pointViewport.height,
+    });
+  }
+  await loadingTask.destroy();
+
+  for (const [pageIndex, raster] of rasters) {
+    doc.removePage(pageIndex);
+    const newPage = doc.insertPage(pageIndex, [raster.width, raster.height]);
+    const jpgImage = await doc.embedJpg(raster.jpegBytes);
+    newPage.drawImage(jpgImage, { x: 0, y: 0, width: raster.width, height: raster.height });
+  }
+
   return doc.save();
+}
+
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const base64 = dataUrl.split(",")[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }

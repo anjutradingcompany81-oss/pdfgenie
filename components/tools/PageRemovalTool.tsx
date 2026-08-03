@@ -22,8 +22,8 @@ type PageRemovalToolProps = {
   outputFileName: string;
 };
 
-// Shared by /tools/remove-pages and /tools/delete-pages — same operation,
-// requested as two distinct tool pages.
+// Backs /tools/delete-pages. Kept as its own component (rather than inlined)
+// since it's a clean, reusable shape if another page-selection tool needs it.
 export function PageRemovalTool({
   icon,
   title,
