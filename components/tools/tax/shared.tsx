@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState, type ReactNode } from "react";
+import type { CtcBreakdown } from "@/lib/tax/engine";
 
 // Native <input type="number"> doesn't strip a leading zero while you're
 // still typing (e.g. "0" then "2000000" stays "02000000" until blur in most
@@ -326,6 +327,40 @@ export function CompareBar({ label, valueA, valueB, labelA, labelB, format }: {
 
 export type BifurcationRow = { label: string; amount: number };
 export type BifurcationSection = { title: string; rows: BifurcationRow[] };
+
+export function buildCtcBifurcationSections(ctc: CtcBreakdown): BifurcationSection[] {
+  return [
+    {
+      title: "Fixed components",
+      rows: [
+        { label: "Basic Salary", amount: ctc.basic },
+        { label: "HRA", amount: ctc.hra },
+        { label: "Special Allowance", amount: Math.max(0, ctc.specialAllowance) },
+        ...(ctc.variablePay > 0 ? [{ label: "Variable Pay", amount: ctc.variablePay }] : []),
+        ...(ctc.bonus > 0 ? [{ label: "Bonus", amount: ctc.bonus }] : []),
+        ...(ctc.dearnessAllowance > 0 ? [{ label: "Dearness Allowance", amount: ctc.dearnessAllowance }] : []),
+        ...(ctc.otherAllowance > 0 ? [{ label: "Other Allowance", amount: ctc.otherAllowance }] : []),
+      ],
+    },
+    {
+      title: "Reimbursements",
+      rows: ctc.reimbursements.filter((r) => r.enabled && r.annualAmount > 0).map((r) => ({ label: r.label, amount: r.annualAmount })),
+    },
+    {
+      title: "Retiral benefits (employer cost)",
+      rows: [
+        { label: "Employer PF", amount: ctc.employerPf },
+        { label: "Gratuity", amount: ctc.gratuity },
+        ...(ctc.employerNps > 0 ? [{ label: "Employer NPS", amount: ctc.employerNps }] : []),
+        ...(ctc.superannuation > 0 ? [{ label: "Superannuation", amount: ctc.superannuation }] : []),
+      ],
+    },
+    {
+      title: "Other employer cost",
+      rows: ctc.otherEmployerCost > 0 ? [{ label: "Group insurance & other", amount: ctc.otherEmployerCost }] : [],
+    },
+  ];
+}
 
 export function CtcBifurcationTable({
   sections,

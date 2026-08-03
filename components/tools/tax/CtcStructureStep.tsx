@@ -3,7 +3,7 @@
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import type { CtcStructureInput, CtcBreakdown, ReimbursementComponent } from "@/lib/tax/engine";
 import { formatINR } from "@/lib/tax/format";
-import { NumberField, SectionCard, ToggleRow, CheckboxRow, PercentAmountField } from "./shared";
+import { NumberField, SectionCard, ToggleRow, CheckboxRow, PercentAmountField, CtcBifurcationTable, buildCtcBifurcationSections } from "./shared";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -150,6 +150,10 @@ export function CtcStructureStep({
           </p>
         )}
       </div>
+
+      <SectionCard title="CTC bifurcation" description="Live breakdown of everything above, grouped the way a payroll sheet would show it.">
+        <CtcBifurcationTable sections={buildCtcBifurcationSections(breakdown)} total={breakdown.totalAnnualCtc} format={formatINR} />
+      </SectionCard>
     </div>
   );
 }
