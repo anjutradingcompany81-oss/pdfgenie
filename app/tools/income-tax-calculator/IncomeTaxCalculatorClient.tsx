@@ -80,6 +80,7 @@ export default function IncomeTaxCalculatorClient() {
           onChangeTds={(tdsAlreadyDeducted) => setInput((prev) => ({ ...prev, tdsAlreadyDeducted }))}
           employeePf={ctcPreview.employeePf}
           hraExemptAmount={result.hraExemption.exemptAmount}
+          ltaReceived={ctcPreview.lta}
         />
       )}
 

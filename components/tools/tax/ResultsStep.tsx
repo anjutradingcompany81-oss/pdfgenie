@@ -115,10 +115,15 @@ export function ResultsStep({
             segments={[
               { label: "Basic + HRA", value: result.ctc.basic + result.ctc.hra },
               { label: "Special Allowance", value: Math.max(0, result.ctc.specialAllowance) },
-              { label: "Variable + Bonus", value: result.ctc.variablePay + result.ctc.bonus },
-              { label: "Reimbursements", value: result.ctc.reimbursementsTotal },
+              { label: "Car + LTA", value: result.ctc.car + result.ctc.lta },
+              {
+                label: "Other components",
+                value: result.ctc.dynamicComponents
+                  .filter((c) => c.category === "FIXED" || c.category === "REIMBURSEMENT")
+                  .reduce((sum, c) => sum + c.amount, 0),
+              },
               { label: "Retirals", value: result.ctc.totalEmployerRetirals },
-              { label: "Other employer cost", value: result.ctc.otherEmployerCost },
+              { label: "Other employer cost", value: result.ctc.otherEmployerCostTotal },
             ]}
           />
         </SectionCard>

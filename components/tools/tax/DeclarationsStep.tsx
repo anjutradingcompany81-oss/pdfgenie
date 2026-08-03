@@ -28,6 +28,7 @@ export function DeclarationsStep({
   onChangeTds,
   employeePf,
   hraExemptAmount,
+  ltaReceived,
 }: {
   declarations: OldRegimeDeclarationInput;
   onChangeDeclarations: (d: OldRegimeDeclarationInput) => void;
@@ -37,6 +38,7 @@ export function DeclarationsStep({
   onChangeTds: (v: number) => void;
   employeePf: number;
   hraExemptAmount: number;
+  ltaReceived: number;
 }) {
   const section80CTotal = employeePf + Object.values(declarations.section80C).reduce((s, v) => s + v, 0);
 
@@ -68,6 +70,19 @@ export function DeclarationsStep({
         {declarations.hasHraDeclaration && (
           <p className="mt-3 text-xs font-semibold text-emerald-700">HRA exemption (old regime): {formatINR(hraExemptAmount)}</p>
         )}
+      </SectionCard>
+
+      <SectionCard
+        title="LTA exemption"
+        description={`You received ${formatINR(ltaReceived)} in LTA. Declare only what you can substantiate with actual eligible travel expenditure — the rest stays taxable.`}
+      >
+        <NumberField
+          label="Eligible LTA exemption claimed"
+          value={declarations.ltaExemptAmount}
+          onChange={(v) => onChangeDeclarations({ ...declarations, ltaExemptAmount: v })}
+          max={ltaReceived}
+          hint={`Capped at LTA received (${formatINR(ltaReceived)})`}
+        />
       </SectionCard>
 
       <SectionCard title="Section 80C" description={`Combined limit ₹1,50,000. Includes your ${formatINR(employeePf)} employee PF automatically.`}>

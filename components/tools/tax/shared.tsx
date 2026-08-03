@@ -19,7 +19,7 @@ function cleanNumericInput(raw: string): string {
   return s;
 }
 
-function NumericInput({
+export function NumericInput({
   value,
   onChange,
   min,
@@ -329,6 +329,9 @@ export type BifurcationRow = { label: string; amount: number };
 export type BifurcationSection = { title: string; rows: BifurcationRow[] };
 
 export function buildCtcBifurcationSections(ctc: CtcBreakdown): BifurcationSection[] {
+  const dynamicByCategory = (category: "FIXED" | "REIMBURSEMENT" | "RETIRAL" | "OTHER") =>
+    ctc.dynamicComponents.filter((c) => c.category === category && c.amount > 0).map((c) => ({ label: c.label, amount: c.amount }));
+
   return [
     {
       title: "Fixed components",
@@ -336,15 +339,16 @@ export function buildCtcBifurcationSections(ctc: CtcBreakdown): BifurcationSecti
         { label: "Basic Salary", amount: ctc.basic },
         { label: "HRA", amount: ctc.hra },
         { label: "Special Allowance", amount: Math.max(0, ctc.specialAllowance) },
-        ...(ctc.variablePay > 0 ? [{ label: "Variable Pay", amount: ctc.variablePay }] : []),
-        ...(ctc.bonus > 0 ? [{ label: "Bonus", amount: ctc.bonus }] : []),
-        ...(ctc.dearnessAllowance > 0 ? [{ label: "Dearness Allowance", amount: ctc.dearnessAllowance }] : []),
-        ...(ctc.otherAllowance > 0 ? [{ label: "Other Allowance", amount: ctc.otherAllowance }] : []),
+        ...dynamicByCategory("FIXED"),
       ],
     },
     {
-      title: "Reimbursements",
-      rows: ctc.reimbursements.filter((r) => r.enabled && r.annualAmount > 0).map((r) => ({ label: r.label, amount: r.annualAmount })),
+      title: "Reimbursements & allowances",
+      rows: [
+        ...(ctc.car > 0 ? [{ label: "Car Allowance", amount: ctc.car }] : []),
+        ...(ctc.lta > 0 ? [{ label: "LTA", amount: ctc.lta }] : []),
+        ...dynamicByCategory("REIMBURSEMENT"),
+      ],
     },
     {
       title: "Retiral benefits (employer cost)",
@@ -352,12 +356,12 @@ export function buildCtcBifurcationSections(ctc: CtcBreakdown): BifurcationSecti
         { label: "Employer PF", amount: ctc.employerPf },
         { label: "Gratuity", amount: ctc.gratuity },
         ...(ctc.employerNps > 0 ? [{ label: "Employer NPS", amount: ctc.employerNps }] : []),
-        ...(ctc.superannuation > 0 ? [{ label: "Superannuation", amount: ctc.superannuation }] : []),
+        ...dynamicByCategory("RETIRAL"),
       ],
     },
     {
       title: "Other employer cost",
-      rows: ctc.otherEmployerCost > 0 ? [{ label: "Group insurance & other", amount: ctc.otherEmployerCost }] : [],
+      rows: dynamicByCategory("OTHER"),
     },
   ];
 }

@@ -161,14 +161,14 @@ export async function generateTaxPdfReport(result: ComparisonResult, profile: Em
   r.row("Basic Salary", inr(result.ctc.basic));
   r.row("HRA", inr(result.ctc.hra));
   r.row("Special Allowance", inr(Math.max(0, result.ctc.specialAllowance)));
-  r.row("Variable Pay + Bonus", inr(result.ctc.variablePay + result.ctc.bonus));
-  r.row("Dearness Allowance + Other Allowance", inr(result.ctc.dearnessAllowance + result.ctc.otherAllowance));
-  r.row("Reimbursements (total)", inr(result.ctc.reimbursementsTotal));
+  r.row("Car Allowance", inr(result.ctc.car));
+  r.row("LTA", inr(result.ctc.lta));
+  for (const c of result.ctc.dynamicComponents) {
+    r.row(c.label, inr(c.amount));
+  }
   r.row("Employer PF", inr(result.ctc.employerPf));
   r.row("Gratuity", inr(result.ctc.gratuity));
   r.row("Employer NPS", inr(result.ctc.employerNps));
-  r.row("Superannuation", inr(result.ctc.superannuation));
-  r.row("Other employer cost", inr(result.ctc.otherEmployerCost));
   r.row("Total Annual CTC", inr(result.ctc.totalAnnualCtc), { bold: true });
 
   r.heading("Old regime vs. new regime");

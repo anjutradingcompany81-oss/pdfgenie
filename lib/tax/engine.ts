@@ -6,10 +6,19 @@
  * chain. This is the single engine used by the wizard preview and the
  * PDF/Excel report generators, so all three always agree.
  *
+ * CTC structure: Basic, HRA, Employer PF, Gratuity, Employer NPS, Car
+ * Allowance, and LTA are always-present, individually %-editable fields.
+ * Everything else (Variable Pay, Bonus, DA, other reimbursements,
+ * Superannuation, other employer cost, or any custom line) lives in
+ * dynamicComponents — a user-managed list that starts empty and can be
+ * added to or removed from freely. Special Allowance is never directly
+ * editable; it always absorbs whatever's left of Total CTC.
+ *
  * Simplifications (documented, not silently assumed):
  * - Employer PF/gratuity/NPS/superannuation are modelled as employer cost,
  *   not cash paid to the employee; only the combined-excess-over-₹7.5L
- *   perquisite rule (Sec 17(2)(vii)) is applied for taxability.
+ *   perquisite rule (Sec 17(2)(vii), which covers PF + NPS + superannuation
+ *   but not gratuity) is applied for taxability.
  * - LTA/car/other reimbursements are NOT assumed exempt — LTA exemption is
  *   only what the user declares as eligible travel expenditure (old regime
  *   only); all other reimbursements are treated as fully taxable cash
@@ -46,42 +55,42 @@ function clampNonNegative(n: number): number {
   return Math.max(0, n);
 }
 
+let dynamicComponentIdCounter = 0;
+export function createDynamicComponentId(): string {
+  dynamicComponentIdCounter += 1;
+  return `dyn-${Date.now()}-${dynamicComponentIdCounter}`;
+}
+
 // ---------------------------------------------------------------------------
 // Input types
 // ---------------------------------------------------------------------------
 
-export type ReimbursementKey =
-  | "lta"
-  | "car"
-  | "fuel"
-  | "driver"
-  | "telephone"
-  | "internet"
-  | "meal"
-  | "booksAndPeriodicals"
-  | "uniform"
-  | "other";
+export type DynamicComponentCategory = "FIXED" | "REIMBURSEMENT" | "RETIRAL" | "OTHER";
 
-export type ReimbursementComponent = {
-  key: ReimbursementKey;
+export type DynamicComponent = {
+  id: string;
   label: string;
-  enabled: boolean;
-  annualAmount: number;
-  /** Old regime only. What the employee can actually substantiate as exempt (e.g. LTA travel bills). Never assumed equal to annualAmount. */
-  exemptAmountOldRegime: number;
+  category: DynamicComponentCategory;
+  percentOfCtc: number;
+  amountOverride: number | null;
 };
 
-export const DEFAULT_REIMBURSEMENTS: ReimbursementComponent[] = [
-  { key: "lta", label: "Leave Travel Allowance", enabled: true, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "car", label: "Car Reimbursement", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "fuel", label: "Fuel Reimbursement", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "driver", label: "Driver Reimbursement", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "telephone", label: "Telephone Reimbursement", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "internet", label: "Internet Reimbursement", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "meal", label: "Meal Reimbursement", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "booksAndPeriodicals", label: "Books & Periodicals", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "uniform", label: "Uniform Reimbursement", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
-  { key: "other", label: "Other Reimbursement", enabled: false, annualAmount: 0, exemptAmountOldRegime: 0 },
+export type ResolvedDynamicComponent = DynamicComponent & { amount: number };
+
+export const DYNAMIC_COMPONENT_PRESETS: { label: string; category: DynamicComponentCategory }[] = [
+  { label: "Variable Pay", category: "FIXED" },
+  { label: "Bonus", category: "FIXED" },
+  { label: "Dearness Allowance", category: "FIXED" },
+  { label: "Other Allowance", category: "FIXED" },
+  { label: "Fuel Reimbursement", category: "REIMBURSEMENT" },
+  { label: "Driver Reimbursement", category: "REIMBURSEMENT" },
+  { label: "Telephone Reimbursement", category: "REIMBURSEMENT" },
+  { label: "Internet Reimbursement", category: "REIMBURSEMENT" },
+  { label: "Meal Reimbursement", category: "REIMBURSEMENT" },
+  { label: "Books & Periodicals", category: "REIMBURSEMENT" },
+  { label: "Uniform Reimbursement", category: "REIMBURSEMENT" },
+  { label: "Superannuation", category: "RETIRAL" },
+  { label: "Other Employer Cost", category: "OTHER" },
 ];
 
 export type EmployeeProfile = {
@@ -96,24 +105,30 @@ export type EmployeeProfile = {
 
 export type CtcStructureInput = {
   totalAnnualCtc: number;
+
   basicPercentOfCtc: number;
   basicOverride: number | null;
+
   hraPercentOfBasic: number;
   hraOverride: number | null;
-  variablePay: number;
-  bonus: number;
-  dearnessAllowance: number;
-  otherAllowance: number;
-
-  reimbursements: ReimbursementComponent[];
 
   pfOnFullBasic: boolean;
+  employerPfPercentOfBasic: number;
   employerPfOverride: number | null;
+
+  gratuityPercentOfBasic: number;
   gratuityOverride: number | null;
+
   employerNpsPercentOfBasic: number;
   employerNpsOverride: number | null;
-  superannuation: number;
-  otherEmployerCost: number;
+
+  carPercentOfCtc: number;
+  carOverride: number | null;
+
+  ltaPercentOfBasic: number;
+  ltaOverride: number | null;
+
+  dynamicComponents: DynamicComponent[];
 };
 
 export type Section80CInput = {
@@ -135,6 +150,8 @@ export type OldRegimeDeclarationInput = {
   monthlyRent: number;
   rentCity: string;
   hasHraDeclaration: boolean;
+
+  ltaExemptAmount: number;
 
   section80C: Section80CInput;
   employeeNpsAdditional: number; // Sec 80CCD(1B)
@@ -193,23 +210,24 @@ export function createDefaultInput(): CalculatorInput {
       basicOverride: null,
       hraPercentOfBasic: 50,
       hraOverride: null,
-      variablePay: 0,
-      bonus: 0,
-      dearnessAllowance: 0,
-      otherAllowance: 0,
-      reimbursements: DEFAULT_REIMBURSEMENTS.map((r) => ({ ...r })),
       pfOnFullBasic: true,
+      employerPfPercentOfBasic: 12,
       employerPfOverride: null,
+      gratuityPercentOfBasic: 4.81,
       gratuityOverride: null,
       employerNpsPercentOfBasic: 0,
       employerNpsOverride: null,
-      superannuation: 0,
-      otherEmployerCost: 0,
+      carPercentOfCtc: 0,
+      carOverride: null,
+      ltaPercentOfBasic: 8.33,
+      ltaOverride: null,
+      dynamicComponents: [],
     },
     oldRegimeDeclarations: {
       monthlyRent: 0,
       rentCity: "Bengaluru",
       hasHraDeclaration: false,
+      ltaExemptAmount: 0,
       section80C: {
         voluntaryPf: 0,
         ppf: 0,
@@ -263,19 +281,16 @@ export type CtcBreakdown = {
   basic: number;
   hra: number;
   specialAllowance: number;
-  variablePay: number;
-  bonus: number;
-  dearnessAllowance: number;
-  otherAllowance: number;
-  reimbursements: ReimbursementComponent[];
-  reimbursementsTotal: number;
+  car: number;
+  lta: number;
+  dearnessAllowanceForRetirals: number;
+  dynamicComponents: ResolvedDynamicComponent[];
   employeePf: number;
   employerPf: number;
   gratuity: number;
   employerNps: number;
-  superannuation: number;
-  otherEmployerCost: number;
   totalEmployerRetirals: number;
+  otherEmployerCostTotal: number;
   taxableExcessRetirals: number;
   totalAnnualCtc: number;
   cashComponentsTotal: number;
@@ -291,34 +306,38 @@ export function buildCtcStructure(
 ): CtcBreakdown {
   const basic = round(ctc.basicOverride ?? ctc.totalAnnualCtc * (ctc.basicPercentOfCtc / 100));
   const hra = round(ctc.hraOverride ?? basic * (ctc.hraPercentOfBasic / 100));
-
-  const reimbursements = ctc.reimbursements.map((r) => ({ ...r, annualAmount: r.enabled ? round(r.annualAmount) : 0 }));
-  const reimbursementsTotal = reimbursements.reduce((sum, r) => sum + r.annualAmount, 0);
+  const car = round(ctc.carOverride ?? ctc.totalAnnualCtc * (ctc.carPercentOfCtc / 100));
+  const lta = round(ctc.ltaOverride ?? basic * (ctc.ltaPercentOfBasic / 100));
 
   const pfWageBase = ctc.pfOnFullBasic ? basic : Math.min(basic, rules.payroll.pfWageCeilingMonthly * 12);
   const employeePf = round(pfWageBase * rules.payroll.employeePfPercentOfBasic);
-  const employerPf = round(ctc.employerPfOverride ?? pfWageBase * rules.payroll.employerPfPercentOfBasic);
-  const gratuity = round(ctc.gratuityOverride ?? basic * rules.payroll.gratuityPercentOfBasic);
+  const employerPf = round(ctc.employerPfOverride ?? pfWageBase * (ctc.employerPfPercentOfBasic / 100));
+  const gratuity = round(ctc.gratuityOverride ?? basic * (ctc.gratuityPercentOfBasic / 100));
   const employerNps = round(ctc.employerNpsOverride ?? basic * (ctc.employerNpsPercentOfBasic / 100));
-  const superannuation = round(ctc.superannuation);
-  const otherEmployerCost = round(ctc.otherEmployerCost);
 
-  const totalEmployerRetirals = employerPf + gratuity + employerNps + superannuation;
-  const taxableExcessRetirals = clampNonNegative(totalEmployerRetirals - rules.employerRetiralTaxableExcessThreshold);
+  const dynamicComponents: ResolvedDynamicComponent[] = ctc.dynamicComponents.map((c) => ({
+    ...c,
+    amount: round(c.amountOverride ?? ctc.totalAnnualCtc * (c.percentOfCtc / 100)),
+  }));
+  const dynamicRetiralTotal = dynamicComponents.filter((c) => c.category === "RETIRAL").reduce((sum, c) => sum + c.amount, 0);
+  const otherEmployerCostTotal = dynamicComponents.filter((c) => c.category === "OTHER").reduce((sum, c) => sum + c.amount, 0);
+  const dynamicCashTotal = dynamicComponents
+    .filter((c) => c.category === "FIXED" || c.category === "REIMBURSEMENT")
+    .reduce((sum, c) => sum + c.amount, 0);
 
-  const variablePay = round(ctc.variablePay);
-  const bonus = round(ctc.bonus);
-  const dearnessAllowance = round(ctc.dearnessAllowance);
-  const otherAllowance = round(ctc.otherAllowance);
+  const dearnessAllowanceForRetirals = dynamicComponents.find((c) => c.label === "Dearness Allowance")?.amount ?? 0;
 
-  const everythingExceptSpecial =
-    basic + hra + variablePay + bonus + dearnessAllowance + otherAllowance + reimbursementsTotal + totalEmployerRetirals + otherEmployerCost;
+  const totalEmployerRetirals = employerPf + gratuity + employerNps + dynamicRetiralTotal;
+  const retiralExcessBase = employerPf + employerNps + dynamicRetiralTotal; // Sec 17(2)(vii) excludes gratuity
+  const taxableExcessRetirals = clampNonNegative(retiralExcessBase - rules.employerRetiralTaxableExcessThreshold);
+
+  const nonCashEmployerCost = totalEmployerRetirals + otherEmployerCostTotal;
+  const everythingExceptSpecial = basic + hra + car + lta + dynamicCashTotal + nonCashEmployerCost;
 
   const specialAllowance = round(ctc.totalAnnualCtc - everythingExceptSpecial);
   const isBalanced = specialAllowance >= 0;
 
-  const cashComponentsTotal =
-    basic + hra + Math.max(0, specialAllowance) + variablePay + bonus + dearnessAllowance + otherAllowance + reimbursementsTotal;
+  const cashComponentsTotal = basic + hra + Math.max(0, specialAllowance) + car + lta + dynamicCashTotal;
 
   const carBand = rules.carReimbursementGradeBands.find(
     (b) => profile.grade >= b.minGrade && (b.maxGrade === null || profile.grade <= b.maxGrade)
@@ -328,19 +347,16 @@ export function buildCtcStructure(
     basic,
     hra,
     specialAllowance,
-    variablePay,
-    bonus,
-    dearnessAllowance,
-    otherAllowance,
-    reimbursements,
-    reimbursementsTotal,
+    car,
+    lta,
+    dearnessAllowanceForRetirals,
+    dynamicComponents,
     employeePf,
     employerPf,
     gratuity,
     employerNps,
-    superannuation,
-    otherEmployerCost,
     totalEmployerRetirals,
+    otherEmployerCostTotal,
     taxableExcessRetirals,
     totalAnnualCtc: round(ctc.totalAnnualCtc),
     cashComponentsTotal,
@@ -373,7 +389,7 @@ export function calculateHraExemption(
 ): HraExemptionResult {
   const hraReceived = ctc.hra;
   const rentPaid = round(declarations.monthlyRent * 12);
-  const salaryForHra = ctc.basic + ctc.dearnessAllowance;
+  const salaryForHra = ctc.basic + ctc.dearnessAllowanceForRetirals;
   const rentThreshold = round(salaryForHra * rules.hra.rentThresholdPercentOfSalary);
   const excessRentOverThreshold = clampNonNegative(rentPaid - rentThreshold);
   const percentOfSalaryLimit = round(
@@ -456,8 +472,7 @@ function buildOldRegimeIncome(
   ageCategory: AgeCategory,
   rules: TaxRuleVersion
 ): RegimeIncomeBuild {
-  const ltaComponent = ctc.reimbursements.find((r) => r.key === "lta");
-  const ltaExempt = ltaComponent ? Math.min(ltaComponent.exemptAmountOldRegime, ltaComponent.annualAmount) : 0;
+  const ltaExempt = Math.min(declarations.ltaExemptAmount, ctc.lta);
 
   const exemptAllowances = hra.exemptAmount + ltaExempt;
   const grossSalary = ctc.cashComponentsTotal + ctc.taxableExcessRetirals + otherIncome.previousEmployerTaxableSalary;
@@ -476,7 +491,7 @@ function buildOldRegimeIncome(
   const breakdown: DeductionLine[] = [];
   breakdown.push(build80C(declarations, ctc.employeePf, rules));
 
-  const npsSalaryBase = ctc.basic + ctc.dearnessAllowance;
+  const npsSalaryBase = ctc.basic + ctc.dearnessAllowanceForRetirals;
   const employerNpsLimit = round(npsSalaryBase * rules.employerNpsDeductionLimit.OLD.PRIVATE);
   breakdown.push({
     label: "Section 80CCD(2) — employer NPS",
@@ -556,7 +571,7 @@ function buildNewRegimeIncome(
     otherIncome.otherSlabTaxedIncome +
     clampNonNegative(otherIncome.familyPension - familyPensionDeduction);
 
-  const npsSalaryBase = ctc.basic + ctc.dearnessAllowance;
+  const npsSalaryBase = ctc.basic + ctc.dearnessAllowanceForRetirals;
   const employerNpsLimit = round(npsSalaryBase * rules.employerNpsDeductionLimit.NEW.PRIVATE);
   const breakdown: DeductionLine[] = [
     {
@@ -801,7 +816,7 @@ function buildTakeHome(ctc: CtcBreakdown, regime: RegimeTaxResult, declarations:
     employerPfAnnual: ctc.employerPf,
     gratuityAnnual: ctc.gratuity,
     employerNpsAnnual: ctc.employerNps,
-    otherEmployerCostAnnual: ctc.otherEmployerCost,
+    otherEmployerCostAnnual: ctc.otherEmployerCostTotal,
   };
 }
 
@@ -881,8 +896,7 @@ export function calculateFull(input: CalculatorInput): ComparisonResult {
   if (input.oldRegimeDeclarations.hasHraDeclaration && input.oldRegimeDeclarations.section80GG > 0) {
     validationErrors.push("Section 80GG cannot be claimed in the same period as HRA exemption — 80GG has been excluded from the old-regime calculation.");
   }
-  const ltaComponent = ctc.reimbursements.find((r) => r.key === "lta");
-  if (ltaComponent && ltaComponent.exemptAmountOldRegime > ltaComponent.annualAmount) {
+  if (input.oldRegimeDeclarations.ltaExemptAmount > ctc.lta) {
     validationErrors.push("LTA exempt amount cannot exceed LTA received — it has been capped at the amount received.");
   }
 
