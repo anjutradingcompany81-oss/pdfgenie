@@ -5,7 +5,7 @@ import { Download, FileSpreadsheet, TrendingDown, AlertTriangle } from "lucide-r
 import type { ComparisonResult, TaxRegime } from "@/lib/tax/engine";
 import { formatINR, formatPercent } from "@/lib/tax/format";
 import { MagneticButton } from "@/components/ui/MagneticButton";
-import { SectionCard, DonutChart, CompareBar } from "./shared";
+import { SectionCard, DonutChart, CompareBar, CtcBifurcationTable, type BifurcationSection } from "./shared";
 
 function RegimeStat({ label, oldValue, newValue }: { label: string; oldValue: number; newValue: number }) {
   return (
@@ -35,6 +35,39 @@ export function ResultsStep({
 
   const recommended = result[result.recommendedRegime === "OLD" ? "old" : "new"];
   const other = result[result.recommendedRegime === "OLD" ? "new" : "old"];
+
+  const ctc = result.ctc;
+  const ctcBifurcationSections: BifurcationSection[] = [
+    {
+      title: "Fixed components",
+      rows: [
+        { label: "Basic Salary", amount: ctc.basic },
+        { label: "HRA", amount: ctc.hra },
+        { label: "Special Allowance", amount: Math.max(0, ctc.specialAllowance) },
+        ...(ctc.variablePay > 0 ? [{ label: "Variable Pay", amount: ctc.variablePay }] : []),
+        ...(ctc.bonus > 0 ? [{ label: "Bonus", amount: ctc.bonus }] : []),
+        ...(ctc.dearnessAllowance > 0 ? [{ label: "Dearness Allowance", amount: ctc.dearnessAllowance }] : []),
+        ...(ctc.otherAllowance > 0 ? [{ label: "Other Allowance", amount: ctc.otherAllowance }] : []),
+      ],
+    },
+    {
+      title: "Reimbursements",
+      rows: ctc.reimbursements.filter((r) => r.enabled && r.annualAmount > 0).map((r) => ({ label: r.label, amount: r.annualAmount })),
+    },
+    {
+      title: "Retiral benefits (employer cost)",
+      rows: [
+        { label: "Employer PF", amount: ctc.employerPf },
+        { label: "Gratuity", amount: ctc.gratuity },
+        ...(ctc.employerNps > 0 ? [{ label: "Employer NPS", amount: ctc.employerNps }] : []),
+        ...(ctc.superannuation > 0 ? [{ label: "Superannuation", amount: ctc.superannuation }] : []),
+      ],
+    },
+    {
+      title: "Other employer cost",
+      rows: ctc.otherEmployerCost > 0 ? [{ label: "Group insurance & other", amount: ctc.otherEmployerCost }] : [],
+    },
+  ];
 
   async function handleDownload(kind: "pdf" | "excel") {
     setDownloading(kind);
@@ -134,6 +167,10 @@ export function ResultsStep({
           </div>
         </SectionCard>
       </div>
+
+      <SectionCard title="CTC bifurcation" description="Every component that makes up the total, grouped the way a payroll sheet would show it.">
+        <CtcBifurcationTable sections={ctcBifurcationSections} total={result.ctc.totalAnnualCtc} format={formatINR} />
+      </SectionCard>
 
       <SectionCard title="Why CTC ≠ gross salary ≠ take-home">
         <div className="grid gap-3 text-sm sm:grid-cols-3">

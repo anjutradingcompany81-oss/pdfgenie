@@ -1,6 +1,70 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
+
+// Native <input type="number"> doesn't strip a leading zero while you're
+// still typing (e.g. "0" then "2000000" stays "02000000" until blur in most
+// browsers), and a controlled numeric value can fight the caret mid-keystroke.
+// NumericInput sidesteps both: it's a text input that only shows the
+// prop-derived value while unfocused, and cleans (strips non-digits, extra
+// dots, leading zeros) on every keystroke while focused.
+function cleanNumericInput(raw: string): string {
+  let s = raw.replace(/[^\d.]/g, "");
+  const firstDot = s.indexOf(".");
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+  }
+  s = s.replace(/^0+(?=\d)/, "");
+  return s;
+}
+
+function NumericInput({
+  value,
+  onChange,
+  min,
+  max,
+  ariaLabel,
+  className,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  ariaLabel?: string;
+  className: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [text, setText] = useState("");
+
+  // While focused, the input shows the locally-buffered raw text (so a
+  // leading zero can be typed through without the browser/React fighting
+  // the caret). Once blurred, it always shows the canonical prop value.
+  const displayValue = focused ? text : String(Number.isFinite(value) ? value : 0);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={displayValue}
+      aria-label={ariaLabel}
+      onFocus={() => {
+        setText(String(Number.isFinite(value) ? value : 0));
+        setFocused(true);
+      }}
+      onBlur={() => setFocused(false)}
+      onChange={(e) => {
+        const cleaned = cleanNumericInput(e.target.value);
+        setText(cleaned);
+        let parsed = cleaned === "" || cleaned === "." ? 0 : Number(cleaned);
+        if (!Number.isFinite(parsed)) parsed = 0;
+        if (min !== undefined) parsed = Math.max(min, parsed);
+        if (max !== undefined) parsed = Math.min(max, parsed);
+        onChange(parsed);
+      }}
+      className={className}
+    />
+  );
+}
 
 export function SectionCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
@@ -19,7 +83,6 @@ export function NumberField({
   suffix,
   min = 0,
   max,
-  step,
   hint,
 }: {
   label: string;
@@ -28,20 +91,18 @@ export function NumberField({
   suffix?: string;
   min?: number;
   max?: number;
-  step?: number;
   hint?: string;
 }) {
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-semibold text-brand-brown-dark">{label}</span>
       <div className="relative">
-        <input
-          type="number"
-          value={Number.isFinite(value) ? value : 0}
+        <NumericInput
+          value={value}
+          onChange={onChange}
           min={min}
           max={max}
-          step={step}
-          onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+          ariaLabel={label}
           className="w-full rounded-full border border-brand-brown-dark/15 bg-white px-5 py-3 text-sm text-brand-brown-dark focus:border-brand-blue focus:outline-none"
         />
         {suffix && (
@@ -75,24 +136,22 @@ export function PercentAmountField({
       <span className="mb-2 block text-sm font-semibold text-brand-brown-dark">{label}</span>
       <div className="grid grid-cols-2 gap-2">
         <div className="relative">
-          <input
-            type="number"
-            value={Number.isFinite(percent) ? percent : 0}
+          <NumericInput
+            value={percent}
+            onChange={onPercentChange}
             min={0}
-            onChange={(e) => onPercentChange(e.target.value === "" ? 0 : Number(e.target.value))}
-            aria-label={`${label} — percent`}
+            ariaLabel={`${label} — percent`}
             className="w-full rounded-full border border-brand-brown-dark/15 bg-white px-5 py-3 text-sm text-brand-brown-dark focus:border-brand-blue focus:outline-none"
           />
           <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xs font-semibold text-brand-brown-dark/50">%</span>
         </div>
         <div className="relative">
           <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-xs font-semibold text-brand-brown-dark/50">₹</span>
-          <input
-            type="number"
-            value={Number.isFinite(amount) ? amount : 0}
+          <NumericInput
+            value={amount}
+            onChange={onAmountChange}
             min={0}
-            onChange={(e) => onAmountChange(e.target.value === "" ? 0 : Number(e.target.value))}
-            aria-label={`${label} — amount`}
+            ariaLabel={`${label} — amount`}
             className="w-full rounded-full border border-brand-brown-dark/15 bg-white py-3 pl-8 pr-5 text-sm text-brand-brown-dark focus:border-brand-blue focus:outline-none"
           />
         </div>
@@ -261,6 +320,58 @@ export function CompareBar({ label, valueA, valueB, labelA, labelB, format }: {
           <span className="w-24 shrink-0 text-right text-[11px] font-semibold text-brand-brown-dark">{format(valueB)}</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+export type BifurcationRow = { label: string; amount: number };
+export type BifurcationSection = { title: string; rows: BifurcationRow[] };
+
+export function CtcBifurcationTable({
+  sections,
+  total,
+  totalLabel = "Total Annual CTC",
+  format,
+}: {
+  sections: BifurcationSection[];
+  total: number;
+  totalLabel?: string;
+  format: (n: number) => string;
+}) {
+  const visibleSections = sections.filter((s) => s.rows.length > 0);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-brand-brown-dark/10">
+      <table className="w-full border-collapse text-xs">
+        <tbody>
+          {visibleSections.map((section) => {
+            const subtotal = section.rows.reduce((sum, r) => sum + r.amount, 0);
+            return (
+              <Fragment key={section.title}>
+                <tr className="bg-brand-blue/5">
+                  <td colSpan={2} className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-brand-blue-deep">
+                    {section.title}
+                  </td>
+                </tr>
+                {section.rows.map((row) => (
+                  <tr key={row.label} className="border-t border-brand-brown-dark/5">
+                    <td className="px-3 py-1 text-brand-brown-dark/80">{row.label}</td>
+                    <td className="px-3 py-1 text-right tabular-nums text-brand-brown-dark">{format(row.amount)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t border-brand-brown-dark/10">
+                  <td className="px-3 py-1 text-right text-[11px] font-semibold text-brand-brown-dark/55">Subtotal</td>
+                  <td className="px-3 py-1 text-right text-[11px] font-semibold tabular-nums text-brand-brown-dark/80">{format(subtotal)}</td>
+                </tr>
+              </Fragment>
+            );
+          })}
+          <tr className="border-t-2 border-brand-brown-dark/20 bg-brand-brown-dark/5">
+            <td className="px-3 py-2 text-sm font-bold text-brand-brown-dark">{totalLabel}</td>
+            <td className="px-3 py-2 text-right text-sm font-bold tabular-nums text-brand-brown-dark">{format(total)}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
