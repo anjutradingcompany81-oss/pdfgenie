@@ -1,6 +1,6 @@
 "use client";
 
-import { FileUp, Loader2 } from "lucide-react";
+import { FileUp, Loader2, Info } from "lucide-react";
 import { useState } from "react";
 import { ToolShell } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
@@ -10,6 +10,13 @@ import { TabButton } from "@/components/tools/TabButton";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { wordToPdf, pdfToWord } from "@/lib/pdf/word";
 import { downloadBlob, bytesToBlob } from "@/lib/pdf/download";
+import {
+  convertPdfViaApi,
+  PasswordRequiredError,
+  ProviderNotConfiguredError,
+  STAGE_LABELS,
+  type ConversionUiStage,
+} from "@/lib/pdf-conversion-client";
 
 type Direction = "word-to-pdf" | "pdf-to-word";
 
@@ -125,35 +132,56 @@ function WordToPdf() {
 
 function PdfToWord() {
   const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<ConversionUiStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [password, setPassword] = useState("");
+
+  const busy = stage !== "idle" && stage !== "completed" && stage !== "failed";
 
   function reset() {
     setFile(null);
+    setStage("idle");
     setError(null);
     setDone(false);
+    setNeedsPassword(false);
+    setPassword("");
   }
 
   async function handleConvert() {
     if (!file) return;
-    setBusy(true);
     setError(null);
     setDone(false);
     try {
-      const buffer = await file.arrayBuffer();
-      const blob = await pdfToWord(buffer);
+      let blob: Blob;
+      try {
+        blob = await convertPdfViaApi(file, "docx", needsPassword ? password : undefined, setStage);
+      } catch (err) {
+        if (err instanceof ProviderNotConfiguredError) {
+          // Professional conversion isn't configured yet — fall back to the
+          // existing client-side (text-only) conversion so the tool keeps
+          // working rather than breaking outright.
+          setStage("converting");
+          const buffer = await file.arrayBuffer();
+          blob = await pdfToWord(buffer);
+        } else {
+          throw err;
+        }
+      }
       const baseName = file.name.replace(/\.pdf$/i, "");
       downloadBlob(blob, `${baseName}.docx`);
       setDone(true);
+      setStage("completed");
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Couldn't read that PDF — it may be corrupted, scanned, or password-protected."
-      );
-    } finally {
-      setBusy(false);
+      if (err instanceof PasswordRequiredError) {
+        setNeedsPassword(true);
+        setStage("idle");
+        setError(needsPassword ? "Incorrect password — try again." : null);
+        return;
+      }
+      setError(err instanceof Error ? err.message : "Unable to convert this PDF.");
+      setStage("failed");
     }
   }
 
@@ -168,6 +196,8 @@ function PdfToWord() {
             setFile(f);
             setError(null);
             setDone(false);
+            setNeedsPassword(false);
+            setPassword("");
           }}
           label="Drop a PDF here, or click to browse"
         />
@@ -177,21 +207,39 @@ function PdfToWord() {
         <>
           <FileChip name={file.name} size={file.size} onRemove={reset} />
 
-          <p className="text-xs text-brand-brown-dark/70">
-            Pulls the selectable text out in reading order and rebuilds it as paragraphs, with a
-            page break between each original page. Fonts, tables, images, and multi-column layouts
-            aren&apos;t reconstructed — for a scanned PDF with no selectable text, this won&apos;t
-            find anything to convert.
-          </p>
+          <div className="flex items-start gap-2 rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-3 text-xs text-brand-brown-dark/70">
+            <Info size={14} className="mt-0.5 shrink-0 text-brand-blue-deep" />
+            <p>
+              Unlike most tools here, this one uses a professional conversion service to preserve
+              fonts, tables, and images — your PDF is sent securely for conversion and the file is
+              deleted from our server shortly after you download the result.
+            </p>
+          </div>
+
+          {needsPassword && (
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-brand-brown-dark">
+                Password protected PDF detected
+              </span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter the PDF's password"
+                className="w-full rounded-full border border-brand-brown-dark/15 bg-white px-5 py-3 text-sm text-brand-brown-dark focus:border-brand-blue focus:outline-none"
+              />
+            </label>
+          )}
 
           {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
+          {busy && <p className="text-sm font-medium text-brand-blue-deep">{STAGE_LABELS[stage]}</p>}
           {done && !error && <p className="text-sm font-medium text-brand-blue-deep">.docx downloaded.</p>}
 
-          <MagneticButton onClick={handleConvert} disabled={busy}>
+          <MagneticButton onClick={handleConvert} disabled={busy || (needsPassword && !password)}>
             {busy ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                Converting…
+                {STAGE_LABELS[stage] || "Converting…"}
               </>
             ) : (
               "Convert to Word"

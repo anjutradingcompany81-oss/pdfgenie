@@ -34,6 +34,7 @@ model User {
   emailTemplates    EmailTemplate[]
   smtpCredential    SmtpCredential?
   signatureRequests SignatureRequest[]
+  pdfConversionJobs PdfConversionJob[]
 
   @@map("users")
 }
@@ -383,9 +384,9 @@ enum SignatureRequestStatus {
 // should go, we store the PDF, and anyone holding the link can open and
 // sign it. `token` is the only access control — there are no recipient
 // accounts, matching the "simple, no email delivery" scope this shipped
-// with. This is the one feature in the app that stores a file server-side;
-// every other tool processes entirely client-side and never uploads
-// anything (see lib/uploads.ts).
+// with. This and PdfConversionJob (below) are the only features that store
+// a file server-side; every other tool processes entirely client-side and
+// never uploads anything (see lib/uploads.ts).
 model SignatureRequest {
   id           String                 @id @default(cuid())
   userId       String?
@@ -414,4 +415,42 @@ model SignatureRequest {
   @@index([userId])
   @@index([anonymousId])
   @@map("signature_requests")
+}
+
+enum PdfConversionTargetFormat {
+  WORD
+  EXCEL
+}
+
+enum PdfConversionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+// Audit-only usage record for the API-based PDF→Word/PDF→Excel conversion
+// (see lib/pdf-conversion/) — never the document content itself, only
+// metadata needed for cost tracking and future plan limits. The PDF and its
+// converted output live for a few minutes under the OS temp directory (see
+// lib/pdf-conversion/temp-storage.ts) and are gone well before this row's
+// createdAt would be queried for anything.
+model PdfConversionJob {
+  id               String                    @id @default(cuid())
+  userId           String?
+  anonymousId      String?
+  targetFormat     PdfConversionTargetFormat
+  provider         String
+  status           PdfConversionStatus       @default(PENDING)
+  pageCount        Int?
+  fileSizeBytes    Int?
+  processingTimeMs Int?
+  errorCode        String?
+  createdAt        DateTime                  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([anonymousId])
+  @@index([createdAt])
+  @@map("pdf_conversion_jobs")
 }

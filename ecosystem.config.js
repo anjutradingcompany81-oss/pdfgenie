@@ -1,4 +1,6 @@
-// deploy-secrets.json holds ADMIN_USERNAME / ADMIN_PASSWORD_HASH / ADMIN_SESSION_SECRET.
+// deploy-secrets.json holds every secret env var this app needs at runtime
+// (DATABASE_URL, ADMIN_USERNAME/PASSWORD_HASH/SESSION_SECRET, Razorpay keys,
+// ADOBE_PDF_CLIENT_ID/SECRET, etc. — see .env.example for the full list).
 // It lives only on the VPS (gitignored) — see scripts/hash-admin-password.mjs to generate it.
 let secrets = {};
 try {
