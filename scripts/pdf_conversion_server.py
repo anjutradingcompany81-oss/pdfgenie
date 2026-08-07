@@ -19,6 +19,7 @@ Run under the dedicated venv at /opt/pdfgenie-ml/venv (see whisper_server.py
 for the sibling self-hosted service this matches).
 """
 import os
+import re
 import tempfile
 
 from flask import Flask, Response, jsonify, request
@@ -62,6 +63,29 @@ def _decrypt_if_needed(input_path: str, password: str | None) -> tuple[str | Non
     with open(decrypted_path, "wb") as f:
         writer.write(f)
     return decrypted_path, None
+
+
+def _looks_like_a_real_table(table) -> bool:
+    if not table or len(table) < 2:
+        return False
+    if not any(len(row) >= 2 for row in table):
+        return False
+    non_empty_cells = sum(1 for row in table for cell in row if cell and str(cell).strip())
+    return non_empty_cells >= 4
+
+
+def _extract_tables_multi_strategy(page):
+    """pdfplumber's default ("lines") strategy only finds tables with actual
+    drawn ruling — most real-world documents (invoices, exports, reports)
+    align columns with whitespace instead, so this also tries a "text"
+    (alignment-based) pass when the ruled-line pass finds nothing usable."""
+    tables = [t for t in page.extract_tables() if _looks_like_a_real_table(t)]
+    if tables:
+        return tables
+
+    text_settings = {"vertical_strategy": "text", "horizontal_strategy": "text"}
+    tables = [t for t in page.extract_tables(text_settings) if _looks_like_a_real_table(t)]
+    return tables
 
 
 @app.post("/convert-to-docx")
@@ -134,7 +158,7 @@ def convert_to_xlsx():
 
         with pdfplumber.open(source_path) as pdf:
             for page_index, page in enumerate(pdf.pages):
-                tables = page.extract_tables()
+                tables = _extract_tables_multi_strategy(page)
                 for table_index, table in enumerate(tables):
                     if not table:
                         continue
@@ -142,20 +166,25 @@ def convert_to_xlsx():
                     label = f"Page {page_index + 1}" if len(tables) == 1 else f"Page {page_index + 1} Table {table_index + 1}"
                     ws = add_sheet(label)
                     for row in table:
+                        if not any(cell and str(cell).strip() for cell in row):
+                            continue  # the "text" strategy can emit spurious blank rows between real ones
                         ws.append(["" if cell is None else cell for cell in row])
 
         if sheet_count == 0:
-            # No detectable table anywhere — fall back to a text-line dump
-            # (page, line) so the tool still produces something usable,
-            # matching the floor the old client-side conversion had.
+            # No detectable table anywhere, even with the looser strategies
+            # above — fall back to text, but still split each line into
+            # columns wherever there's a run of 2+ spaces (the common
+            # whitespace-alignment convention), rather than dumping the
+            # whole line into one cell.
             ws = add_sheet("Text")
-            ws.append(["Page", "Line"])
+            ws.append(["Page", "Column 1", "Column 2", "Column 3", "Column 4", "Column 5"])
             with pdfplumber.open(source_path) as pdf:
                 for page_index, page in enumerate(pdf.pages):
                     text = page.extract_text() or ""
                     for line in text.splitlines():
                         if line.strip():
-                            ws.append([page_index + 1, line])
+                            cells = re.split(r" {2,}|\t", line.strip())
+                            ws.append([page_index + 1, *cells])
 
         xlsx_path = input_path + ".out.xlsx"
         cleanup_paths.append(xlsx_path)
