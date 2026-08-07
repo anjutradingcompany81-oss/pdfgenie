@@ -15,6 +15,12 @@ export function isConversionProviderConfigured(): boolean {
   if (configured === "adobe") {
     return !!process.env.ADOBE_PDF_CLIENT_ID && !!process.env.ADOBE_PDF_CLIENT_SECRET;
   }
+  if (configured === "self-hosted") {
+    // No credentials needed — if the local Flask service (see
+    // scripts/pdf_conversion_server.py) isn't actually running, that surfaces
+    // per-request as PROVIDER_UNAVAILABLE rather than a silent fallback.
+    return true;
+  }
   return false;
 }
 
@@ -33,6 +39,11 @@ export async function getConversionProvider(): Promise<PDFConversionProvider> {
     case "adobe": {
       const { AdobeConversionProvider } = await import("./adobe-provider");
       cachedProvider = new AdobeConversionProvider();
+      return cachedProvider;
+    }
+    case "self-hosted": {
+      const { SelfHostedConversionProvider } = await import("./self-hosted-provider");
+      cachedProvider = new SelfHostedConversionProvider();
       return cachedProvider;
     }
     default:
