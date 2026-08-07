@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { SmoothScroll } from "@/components/layout/SmoothScroll";
@@ -10,8 +10,8 @@ import { Footer } from "@/components/layout/Footer";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
-const poppins = Poppins({
-  variable: "--font-poppins",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
 });
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${poppins.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning className={`${plusJakartaSans.variable} antialiased`}>
       <body className="bg-brand-cream text-foreground">
         {/* Sets data-theme before first paint (no FOUC) without reading
             cookies() server-side, which would force every page dynamic —

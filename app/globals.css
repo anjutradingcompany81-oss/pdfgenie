@@ -1,27 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  /* Base surfaces — light theme */
-  --background: #fafaf8;
-  --foreground: #17130f;
+  /* "Modern SaaS + AI Utility" palette — Indigo/Violet/Cyan on slate text.
+     Token NAMES are legacy (brand-blue/brand-brown/etc. from the original
+     blue/brown/cream brand) and deliberately kept as-is so the hundreds of
+     existing text-brand-brown-dark / bg-brand-blue-deep usages across the
+     app don't need touching — only the VALUES changed here. */
+  --background: #f8fafc;
+  --foreground: #0f172a;
 
-  /* Blue lineage -> "magic" accent */
-  --color-brand-blue: #2563eb;
-  --color-brand-blue-deep: #1e3a8a;
-  --color-brand-blue-light: #60a5fa;
+  /* Primary -> Secondary: Indigo -> Violet */
+  --color-brand-blue: #4f46e5;
+  --color-brand-blue-deep: #7c3aed;
+  --color-brand-blue-light: #a5b4fc;
 
-  /* Brown lineage -> warm "genie lamp" accent.
-     --color-brand-brown-dark is the de-facto body/heading text token across
-     the app (text-brand-brown-dark + its /50-/85 opacity variants) — keep it
-     a dark, near-black warm brown for legible text on the light background. */
-  --color-brand-brown: #6b4423;
-  --color-brand-brown-dark: #4a3728;
-  --color-brand-cream: #fafaf8;
+  /* --color-brand-brown-dark is the de-facto body/heading text token across
+     the app (text-brand-brown-dark + its /50-/85 opacity variants) — set to
+     the palette's Text color. --color-brand-brown carries the Accent (Cyan)
+     for badges/blobs/secondary icons. */
+  --color-brand-brown: #06b6d4;
+  --color-brand-brown-dark: #0f172a;
+  --color-brand-cream: #f8fafc;
 
   /* Card/panel surface, distinct enough from --background for subtle depth */
   --color-brand-surface: #ffffff;
-  /* Bold gold for hero glow / highest-emphasis CTAs */
-  --color-brand-gold-glow: #c9862e;
+  /* Cyan accent for the "inverted" button variant / highest-emphasis CTAs */
+  --color-brand-gold-glow: #06b6d4;
 
   /* Status colors, tuned for contrast on a light surface */
   --color-status-success: #059669;
@@ -30,9 +34,9 @@
 
   /* Card shape/elevation — theme-driven so Creative Tim/Preline can swap a
      soft diffused look vs a crisp bordered one without per-component logic.
-     Default matches the site's existing rounded-3xl card look, no shadow. */
-  --radius-card: 1.5rem;
-  --shadow-card: none;
+     16-20px radius with a soft shadow, per the "Modern SaaS" spec. */
+  --radius-card: 1.125rem;
+  --shadow-card: 0 4px 24px -4px rgba(15, 23, 42, 0.08);
 }
 
 /* Creative Tim theme — gradient purple/pink accents, soft diffused "Soft UI"
@@ -115,7 +119,7 @@
   --color-status-warning: var(--color-status-warning);
   --radius-card: var(--radius-card);
   --shadow-card: var(--shadow-card);
-  --font-poppins: var(--font-poppins);
+  --font-sans: var(--font-sans);
   --color-dsc-primary: var(--color-dsc-primary);
   --color-dsc-secondary: var(--color-dsc-secondary);
   --color-dsc-accent: var(--color-dsc-accent);
@@ -157,7 +161,7 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   overflow-x: hidden;
 }
 
@@ -211,6 +215,17 @@ html.has-custom-cursor * {
    entirely — importance then breaks the tie in our favor as intended.
    ========================================================================== */
 @layer utilities {
+
+/* Default theme card treatment — creative-tim/preline override these below
+   via !important, so this only takes effect when no data-theme is set. */
+.tool-card,
+.surface-card,
+.dropzone,
+.file-chip,
+.stat-card {
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
 
 /* MagneticButton — components/ui/MagneticButton.tsx */
 [data-theme="creative-tim"] .magnetic-solid {

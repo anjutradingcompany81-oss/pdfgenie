@@ -52,7 +52,7 @@ export function MagneticButton({
   // own — they're theme-scoped selector hooks for globals.css so Creative
   // Tim/Preline can restyle each variant without a second JS dimension.
   const solid =
-    "magnetic-solid bg-gradient-to-r from-brand-blue-deep to-brand-blue text-white shadow-[0_0_0_0_rgba(143,179,255,0)] hover:brightness-110 hover:shadow-[0_0_30px_-6px_var(--color-brand-blue-light)]";
+    "magnetic-solid bg-gradient-to-r from-brand-blue to-brand-blue-deep text-white shadow-[0_0_0_0_rgba(143,179,255,0)] hover:brightness-110 hover:shadow-[0_0_30px_-6px_var(--color-brand-blue-light)]";
   const outline =
     "magnetic-outline border-2 border-brand-brown/60 text-foreground hover:border-brand-brown hover:bg-brand-brown/10";
   const inverted = "magnetic-inverted bg-brand-gold-glow text-brand-brown-dark hover:brightness-105";
