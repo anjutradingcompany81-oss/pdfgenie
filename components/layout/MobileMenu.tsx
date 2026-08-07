@@ -43,7 +43,7 @@ export function MobileMenu({
       aria-modal="true"
       aria-label="Menu"
       tabIndex={-1}
-      className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-brand-blue-deep px-6 py-6 text-white outline-none lg:hidden"
+      className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-brand-cream px-6 py-6 text-brand-brown-dark outline-none lg:hidden"
       initial={{ clipPath: "inset(0 0 100% 0)" }}
       animate={{ clipPath: "inset(0 0 0% 0)" }}
       exit={{ clipPath: "inset(0 0 100% 0)" }}
@@ -51,15 +51,15 @@ export function MobileMenu({
     >
       <div className="flex items-center justify-between">
         <span className="text-lg font-bold">
-          PDF<span className="text-brand-blue-light">Genie</span>
+          PDF<span className="text-brand-blue-deep">Genie</span>
         </span>
         <div className="flex items-center gap-2">
-          <ThemeSwitcher variant="dark" />
+          <ThemeSwitcher variant="light" />
           <button
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="flex h-10 w-10 items-center justify-center text-2xl"
+            className="flex h-10 w-10 items-center justify-center text-2xl text-brand-brown-dark"
           >
             &times;
           </button>
@@ -72,7 +72,7 @@ export function MobileMenu({
         transition={{ delay: 0.1, duration: 0.4 }}
         className="mt-8"
       >
-        <SearchTools variant="dark" className="w-full" onNavigate={onClose} />
+        <SearchTools variant="light" className="w-full" onNavigate={onClose} />
       </motion.div>
 
       <motion.nav
@@ -82,7 +82,7 @@ export function MobileMenu({
         className="mt-6 flex flex-wrap gap-x-6 gap-y-2"
       >
         {MARKETING_LINKS.map((link) => (
-          <a key={link.href} href={link.href} onClick={onClose} className="text-sm font-semibold text-white/70">
+          <a key={link.href} href={link.href} onClick={onClose} className="text-sm font-semibold text-brand-brown-dark/70">
             {link.label}
           </a>
         ))}
@@ -94,7 +94,7 @@ export function MobileMenu({
         transition={{ delay: 0.2, duration: 0.4 }}
         className="mt-6 flex-1"
       >
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-white/50">Tools</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-brand-brown-dark/50">Tools</p>
         <MobileToolCategories categories={toolCategories} activeHref={pathname} onNavigate={onClose} />
       </motion.div>
 
@@ -102,7 +102,7 @@ export function MobileMenu({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.4 }}
-        className="mt-8 border-t border-white/15 pt-6"
+        className="mt-8 border-t border-brand-brown-dark/10 pt-6"
       >
         {isAuthed ? (
           <div className="space-y-4">
@@ -110,10 +110,10 @@ export function MobileMenu({
               <Avatar image={userImage} size={40} iconSize={20} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{userName || "Account"}</p>
-                {userEmail && <p className="truncate text-xs text-white/60">{userEmail}</p>}
+                {userEmail && <p className="truncate text-xs text-brand-brown-dark/60">{userEmail}</p>}
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 text-sm font-semibold text-white/70">
+            <div className="flex flex-wrap gap-3 text-sm font-semibold text-brand-brown-dark/70">
               <NextLink href="/dashboard" onClick={onClose}>
                 Dashboard
               </NextLink>
@@ -126,7 +126,7 @@ export function MobileMenu({
                 onClose();
                 signOut({ callbackUrl: "/" });
               }}
-              variant="inverted"
+              variant="solid"
               className="w-full justify-center"
             >
               Log out
@@ -134,16 +134,16 @@ export function MobileMenu({
           </div>
         ) : (
           <div className="space-y-3">
-            <NextLink href="/login" onClick={onClose} className="block text-center text-sm font-semibold text-white/85">
+            <NextLink href="/login" onClick={onClose} className="block text-center text-sm font-semibold text-brand-brown-dark/85">
               Log in
             </NextLink>
-            <MagneticButton href="/signup" onClick={onClose} variant="inverted" className="w-full justify-center">
+            <MagneticButton href="/signup" onClick={onClose} variant="solid" className="w-full justify-center">
               Sign up
             </MagneticButton>
             <NextLink
               href="/admin/dashboard/login"
               onClick={onClose}
-              className="block text-center text-sm font-semibold text-white/70"
+              className="block text-center text-sm font-semibold text-brand-brown-dark/70"
             >
               Admin
             </NextLink>

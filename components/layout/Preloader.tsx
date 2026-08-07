@@ -33,7 +33,7 @@ export function Preloader() {
           transition={{ duration: 0.6, ease: "easeInOut", delay: 0.1 }}
         >
           <motion.div
-            className="absolute inset-0 origin-bottom bg-brand-blue-deep"
+            className="absolute inset-0 origin-bottom bg-brand-blue/20"
             initial={{ scaleY: 1 }}
             animate={{ scaleY: 0 }}
             transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1], delay: 0.8 }}

@@ -72,7 +72,7 @@ export function Pricing() {
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 className={`relative flex h-full flex-col rounded-3xl p-8 ${
                   tier.highlighted
-                    ? "bg-brand-blue-deep text-white shadow-xl shadow-brand-blue-deep/20 lg:scale-105"
+                    ? "border-2 border-brand-blue bg-gradient-to-br from-brand-blue/[0.06] to-brand-blue/[0.12] text-brand-brown-dark shadow-xl shadow-brand-blue-deep/10 lg:scale-105"
                     : "border border-brand-brown-dark/10 bg-white text-brand-brown-dark"
                 }`}
               >
@@ -83,35 +83,18 @@ export function Pricing() {
                 )}
 
                 <h3 className="text-lg font-bold">{tier.name}</h3>
-                <p
-                  className={`mt-2 text-sm ${
-                    tier.highlighted ? "text-white/70" : "text-brand-brown-dark/70"
-                  }`}
-                >
-                  {tier.description}
-                </p>
+                <p className="mt-2 text-sm text-brand-brown-dark/70">{tier.description}</p>
 
                 <div className="mt-6 flex items-baseline gap-1">
                   <span className="text-5xl font-bold">{tier.price}</span>
-                  <span
-                    className={tier.highlighted ? "text-white/60" : "text-brand-brown-dark/70"}
-                  >
-                    {tier.period}
-                  </span>
+                  <span className="text-brand-brown-dark/70">{tier.period}</span>
                 </div>
 
                 <ul className="mt-8 flex-1 space-y-3">
                   {tier.features.map((f) => (
                     <li key={f} className="flex items-start gap-3 text-sm">
-                      <Check
-                        size={18}
-                        className={`mt-0.5 shrink-0 ${
-                          tier.highlighted ? "text-brand-blue-light" : "text-brand-blue-deep"
-                        }`}
-                      />
-                      <span className={tier.highlighted ? "text-white/85" : "text-brand-brown-dark/75"}>
-                        {f}
-                      </span>
+                      <Check size={18} className="mt-0.5 shrink-0 text-brand-blue-deep" />
+                      <span className="text-brand-brown-dark/75">{f}</span>
                     </li>
                   ))}
                 </ul>
@@ -121,7 +104,7 @@ export function Pricing() {
                     <CheckoutButton
                       planKey={tier.planKey}
                       planLabel={tier.name}
-                      variant={tier.highlighted ? "inverted" : "outline"}
+                      variant={tier.highlighted ? "solid" : "outline"}
                       className="w-full justify-center"
                     >
                       {tier.cta}
@@ -129,7 +112,7 @@ export function Pricing() {
                   ) : (
                     <MagneticButton
                       href="/tools"
-                      variant={tier.highlighted ? "inverted" : "outline"}
+                      variant={tier.highlighted ? "solid" : "outline"}
                       className="w-full justify-center"
                     >
                       {tier.cta}
