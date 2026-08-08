@@ -27,17 +27,20 @@ ruled, so an unruled document doesn't gain a grid it never had.
 Run under the dedicated venv at /opt/pdfgenie-ml/venv (see whisper_server.py
 for the sibling self-hosted service this matches).
 """
+import io
 import os
 import re
 import tempfile
 
 from flask import Flask, Response, jsonify, request
 from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from pdf2docx import Converter
 from pypdf import PdfReader, PdfWriter
 import pdfplumber
+import pymupdf
 
 PORT = int(os.environ.get("PDF_CONVERSION_PORT", "5007"))
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -274,6 +277,51 @@ def _number_format_for(text: str, is_currency: bool, is_percent: bool) -> str:
     return f'"$"{base}' if is_currency else base
 
 
+_POINTS_TO_PIXELS = 96 / 72  # Excel positions drawings in pixels at 96dpi
+
+
+def _add_page_images(ws, pdf_path, page_number, table):
+    """Carries embedded artwork (a letterhead logo, a stamp) across to the
+    sheet, anchored to whichever cell it sits on top of in the PDF. Best
+    effort by design — a page whose images can't be decoded still converts,
+    it just arrives without them."""
+    if table is None or not table.rows:
+        return
+    row_tops = [r.bbox[1] for r in table.rows if r.bbox]
+    col_starts = sorted({round(c[0], 1) for r in table.rows for c in r.cells if c})
+    if not row_tops or not col_starts:
+        return
+
+    try:
+        doc = pymupdf.open(pdf_path)
+    except Exception:  # noqa: BLE001 — artwork is a nicety, never a hard failure
+        return
+    try:
+        page = doc[page_number]
+        for xref, *_rest in page.get_images(full=True):
+            try:
+                rects = page.get_image_rects(xref)
+                if not rects:
+                    continue
+                rect = rects[0]
+                pix = pymupdf.Pixmap(doc, xref)
+                if pix.alpha or pix.n > 3:
+                    pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
+                png = pix.tobytes("png")
+
+                row = max(0, sum(1 for t in row_tops if t < rect.y0 - 1) - 1)
+                col = max(0, sum(1 for s in col_starts if s < rect.x0 - 1) - 1)
+
+                image = XLImage(io.BytesIO(png))
+                image.width = max(1, int(rect.width * _POINTS_TO_PIXELS))
+                image.height = max(1, int(rect.height * _POINTS_TO_PIXELS))
+                ws.add_image(image, f"{get_column_letter(col + 1)}{row + 1}")
+            except Exception:  # noqa: BLE001 — skip just this image
+                continue
+    finally:
+        doc.close()
+
+
 def _collect_cells(table):
     """Flattens a detected table into placed cells with real row/column spans.
 
@@ -494,6 +542,8 @@ def convert_to_xlsx():
                     label = f"Page {page_index + 1}" if len(tables) == 1 else f"Page {page_index + 1} Table {table_index + 1}"
                     ws = add_sheet(label)
                     _style_and_write_table(ws, page, table, ruled)
+                    if table_index == 0:
+                        _add_page_images(ws, source_path, page_index, table)
 
         if sheet_count == 0:
             # No detectable table anywhere, even with the looser strategies
