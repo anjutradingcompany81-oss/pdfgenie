@@ -39,6 +39,7 @@ from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.page import PageMargins
 from pdf2docx import Converter
 from pypdf import PdfReader, PdfWriter
 import pdfplumber
@@ -317,6 +318,56 @@ def _number_format_for(text: str, is_currency: bool, is_percent: bool) -> str:
 
 _EMU_PER_POINT = 12700  # Excel positions drawings in English Metric Units
 _ARTWORK_RENDER_DPI = 200
+# Excel sizes columns in characters of the default font, not in points. At
+# Calibri 11 one character is 7 screen pixels and each cell carries 5 pixels of
+# padding, and screen pixels are 96dpi against the PDF's 72dpi points.
+_PIXELS_PER_POINT = 96 / 72
+_PIXELS_PER_CHARACTER = 7
+_CELL_PADDING_PIXELS = 5
+# PDF page geometry -> Excel paper code, keyed on (short edge, long edge).
+_PAPER_SIZES = {
+    (612, 792): 1,    # Letter
+    (612, 1008): 5,   # Legal
+    (595, 842): 9,    # A4
+    (842, 1191): 8,   # A3
+    (420, 595): 11,   # A5
+    (516, 729): 9,    # B5-ish, closest standard
+}
+
+
+def _points_to_column_width(points: float) -> float:
+    return max(0.0, (points * _PIXELS_PER_POINT - _CELL_PADDING_PIXELS) / _PIXELS_PER_CHARACTER)
+
+
+def _apply_page_setup(ws, pdf_page, table):
+    """Reproduces the source page's paper size, orientation and margins so the
+    sheet prints at the same physical dimensions as the PDF it came from."""
+    try:
+        width = float(pdf_page.width)
+        height = float(pdf_page.height)
+    except (TypeError, ValueError):
+        return
+
+    paper = _PAPER_SIZES.get((round(min(width, height)), round(max(width, height))))
+    if paper is not None:
+        ws.page_setup.paperSize = paper
+    ws.page_setup.orientation = "landscape" if width > height else "portrait"
+    ws.page_setup.scale = 100
+    if ws.sheet_properties.pageSetUpPr is not None:
+        ws.sheet_properties.pageSetUpPr.fitToPage = False
+
+    bbox = getattr(table, "bbox", None)
+    if not bbox:
+        return
+    x0, top, x1, bottom = bbox
+    ws.page_margins = PageMargins(
+        left=max(0.0, x0) / 72,
+        right=max(0.0, width - x1) / 72,
+        top=max(0.0, top) / 72,
+        bottom=max(0.0, height - bottom) / 72,
+        header=0.0,
+        footer=0.0,
+    )
 
 
 def _artwork_rects(mupdf_page):
@@ -543,18 +594,18 @@ def _style_and_write_table(ws, page, table, ruled: bool, pdf_path=None, page_num
         if height > 0:
             ws.row_dimensions[row_map[row_index] + 1].height = round(min(height, 409), 1)
 
-    # Column width is measured in characters; ~7 points per character at the
-    # default font is the conventional approximation.
     widths: dict[int, float] = {}
     for item in cells:
         if item["col_end"] != item["col"]:
             continue  # a merged span says nothing about any single column
         points = item["bbox"][2] - item["bbox"][0]
-        widths[item["col"]] = max(widths.get(item["col"], 0.0), points / 7.0)
+        widths[item["col"]] = max(widths.get(item["col"], 0.0), _points_to_column_width(points))
     for col_index in range(col_count):
         ws.column_dimensions[get_column_letter(col_index + 1)].width = round(
-            max(3.0, min(widths.get(col_index, 10.0), 120.0)), 2
+            max(1.0, min(widths.get(col_index, 10.0), 255.0)), 2
         )
+
+    _apply_page_setup(ws, page, table)
 
     if pdf_path:
         _add_cell_artwork(ws, pdf_path, page_number, cells, row_map)
