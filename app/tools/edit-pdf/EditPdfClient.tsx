@@ -21,6 +21,7 @@ import {
   Trash2,
   Bold,
   Italic,
+  Edit3,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ToolShell } from "@/components/tools/ToolShell";
@@ -30,6 +31,7 @@ import { PrivacyNote } from "@/components/tools/PrivacyNote";
 import { EditPageThumbRail } from "@/components/tools/EditPageThumbRail";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { getPageCount, getPageSize, renderPageToCanvas } from "@/lib/pdf/pdfjs";
+import { extractTextRuns, type TextRun } from "@/lib/pdf/text-runs";
 import { downloadBlob, bytesToBlob } from "@/lib/pdf/download";
 import {
   applyPdfEdits,
@@ -38,6 +40,7 @@ import {
   FONT_FAMILY_LABELS,
   type EditObject,
   type TextObject,
+  type TextEditObject,
   type ShapeObject,
   type ImageObject,
   type DrawObject,
@@ -49,11 +52,12 @@ import {
 
 const PREVIEW_WIDTH = 640;
 
-type ToolId = "select" | "text" | "rectangle" | "ellipse" | "line" | "arrow" | "highlight" | "cover" | "redact" | "image" | "draw";
+type ToolId = "select" | "text" | "editText" | "rectangle" | "ellipse" | "line" | "arrow" | "highlight" | "cover" | "redact" | "image" | "draw";
 
 const TOOLS: { id: ToolId; label: string; icon: typeof MousePointer2 }[] = [
   { id: "select", label: "Select", icon: MousePointer2 },
   { id: "text", label: "Text", icon: Type },
+  { id: "editText", label: "Edit Text", icon: Edit3 },
   { id: "rectangle", label: "Rectangle", icon: Square },
   { id: "ellipse", label: "Ellipse", icon: Circle },
   { id: "line", label: "Line", icon: Minus },
@@ -128,6 +132,70 @@ function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/**
+ * Approximates a text run's background and ink color by histogramming
+ * pixels from the already-rendered preview canvas — no content-stream color
+ * parsing needed. The most common (quantized) color is taken as the
+ * background; among colors meaningfully different from it, the one that's
+ * darkest relative to the background is taken as the text color. Works well
+ * for the common case (solid-color text on a plain background); unusual
+ * cases (gradients, busy backgrounds) just fall back to black-on-white.
+ */
+function sampleRunColors(
+  canvas: HTMLCanvasElement,
+  run: { xRatio: number; yRatio: number; wRatio: number; hRatio: number }
+): { background: RGB; text: RGB } {
+  const fallback = { background: WHITE, text: BLACK };
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return fallback;
+
+  const x = Math.max(0, Math.round(run.xRatio * canvas.width));
+  const y = Math.max(0, Math.round(run.yRatio * canvas.height));
+  const w = Math.max(1, Math.min(canvas.width - x, Math.round(run.wRatio * canvas.width)));
+  const h = Math.max(1, Math.min(canvas.height - y, Math.round(run.hRatio * canvas.height)));
+  if (w <= 0 || h <= 0) return fallback;
+
+  let data: Uint8ClampedArray;
+  try {
+    data = ctx.getImageData(x, y, w, h).data;
+  } catch {
+    return fallback; // e.g. a tainted canvas — shouldn't happen for a same-origin render, but don't crash the editor over a color guess
+  }
+
+  const buckets = new Map<string, { count: number; r: number; g: number; b: number }>();
+  for (let i = 0; i < data.length; i += 4) {
+    // Quantize to reduce anti-aliasing noise so near-identical shades bucket together.
+    const r = Math.round(data[i] / 16) * 16;
+    const g = Math.round(data[i + 1] / 16) * 16;
+    const b = Math.round(data[i + 2] / 16) * 16;
+    const key = `${r},${g},${b}`;
+    const entry = buckets.get(key);
+    if (entry) entry.count += 1;
+    else buckets.set(key, { count: 1, r, g, b });
+  }
+
+  const entries = [...buckets.values()].sort((a, b) => b.count - a.count);
+  if (entries.length === 0) return fallback;
+
+  const bg = entries[0];
+  const background: RGB = { r: bg.r / 255, g: bg.g / 255, b: bg.b / 255 };
+  const bgLuminance = 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b;
+
+  let text: RGB = BLACK;
+  let bestScore = -Infinity;
+  for (const e of entries) {
+    const distFromBg = Math.hypot(e.r - bg.r, e.g - bg.g, e.b - bg.b);
+    if (distFromBg < 40) continue; // too close to background to be ink
+    const luminance = 0.299 * e.r + 0.587 * e.g + 0.114 * e.b;
+    const score = bgLuminance - luminance + distFromBg * 0.1; // prefer darker-than-background ink, the common case
+    if (score > bestScore) {
+      bestScore = score;
+      text = { r: e.r / 255, g: e.g / 255, b: e.b / 255 };
+    }
+  }
+  return { background, text };
+}
+
 const BOX_DEFAULT_KINDS = new Set<BoxShapeKind>(["rectangle", "ellipse", "highlight", "cover", "redact"]);
 const LINE_KINDS = new Set<LineShapeKind>(["line", "arrow"]);
 
@@ -138,7 +206,25 @@ type DragState =
   | { mode: "draw"; id: string }
   | null;
 
-type TextEditorState = { id: string | null; pageIndex: number; xRatio: number; yRatio: number; text: string };
+type TextEditorState = {
+  id: string | null;
+  pageIndex: number;
+  xRatio: number;
+  yRatio: number;
+  text: string;
+  /** Present only when editing/replacing a run of text that already existed in the PDF (as opposed to a brand-new text box). */
+  runEdit?: {
+    wRatio: number;
+    hRatio: number;
+    baselineOffsetPt: number;
+    fontSizePt: number;
+    fontFamily: FontFamily;
+    bold: boolean;
+    italic: boolean;
+    backgroundColor: RGB;
+    color: RGB;
+  };
+};
 
 export default function EditPdfPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -158,11 +244,13 @@ export default function EditPdfPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [textEditor, setTextEditor] = useState<TextEditorState | null>(null);
   const [style, setStyle] = useState<Style>(DEFAULT_STYLE);
+  const [textRuns, setTextRuns] = useState<TextRun[]>([]);
 
   const canvasHost = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const dragRef = useRef<DragState>(null);
+  const pageCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const previewScale = pageSizePt.width ? PREVIEW_WIDTH / pageSizePt.width : 1;
   const previewHeight = pageSizePt.height * previewScale;
 
@@ -257,6 +345,7 @@ export default function EditPdfPage() {
         canvas.style.height = "100%";
         canvas.style.display = "block";
         canvasHost.current.replaceChildren(canvas);
+        pageCanvasRef.current = canvas;
       })
       .catch(() => {
         // The background page image is a visual aid only — editing still works
@@ -266,6 +355,25 @@ export default function EditPdfPage() {
       cancelled = true;
     };
   }, [buffer, pageIndex, pageSizePt.width]);
+
+  // Detect existing text runs whenever the page changes — cheap enough (pure
+  // text-content parsing, no rendering) to always keep ready, not just when
+  // the Edit Text tool is active, so double-clicking a placed edit to
+  // re-open it works regardless of which tool is currently selected.
+  useEffect(() => {
+    if (!buffer) return;
+    let cancelled = false;
+    extractTextRuns(buffer, pageIndex)
+      .then((runs) => {
+        if (!cancelled) setTextRuns(runs);
+      })
+      .catch(() => {
+        // No detected runs just means the Edit Text tool has nothing to offer on this page — not fatal.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [buffer, pageIndex]);
 
   function ratioFromEvent(e: { clientX: number; clientY: number }) {
     const rect = previewRef.current!.getBoundingClientRect();
@@ -289,9 +397,86 @@ export default function EditPdfPage() {
     setSelectedId(obj.id);
   }
 
+  /** Opens the inline editor for a detected (or already-edited) run of existing text. Re-clicking a run that's already been edited seeds the editor with its current replacement text, not the stale original. */
+  function startEditingRun(run: TextRun) {
+    const existing = objectsRef.current.find((o) => o.id === run.id && o.type === "textEdit") as TextEditObject | undefined;
+    if (existing) {
+      setTextEditor({
+        id: existing.id,
+        pageIndex: existing.pageIndex,
+        xRatio: existing.xRatio,
+        yRatio: existing.yRatio,
+        text: existing.text,
+        runEdit: {
+          wRatio: existing.wRatio,
+          hRatio: existing.hRatio,
+          baselineOffsetPt: existing.baselineOffsetPt,
+          fontSizePt: existing.fontSize,
+          fontFamily: existing.fontFamily,
+          bold: existing.bold,
+          italic: existing.italic,
+          backgroundColor: existing.backgroundColor,
+          color: existing.color,
+        },
+      });
+      setSelectedId(existing.id);
+      return;
+    }
+
+    const canvas = pageCanvasRef.current;
+    const sampled = canvas ? sampleRunColors(canvas, run) : { background: WHITE, text: BLACK };
+    setTextEditor({
+      id: run.id,
+      pageIndex: run.pageIndex,
+      xRatio: run.xRatio,
+      yRatio: run.yRatio,
+      text: run.text,
+      runEdit: {
+        wRatio: run.wRatio,
+        hRatio: run.hRatio,
+        baselineOffsetPt: run.baselineOffsetPt,
+        fontSizePt: run.fontSizePt,
+        fontFamily: run.fontFamily,
+        bold: run.bold,
+        italic: run.italic,
+        backgroundColor: sampled.background,
+        color: sampled.text,
+      },
+    });
+    setSelectedId(run.id);
+  }
+
   function commitTextEditor() {
     if (!textEditor) return;
     const trimmed = textEditor.text;
+
+    if (textEditor.runEdit) {
+      const r = textEditor.runEdit;
+      const obj: TextEditObject = {
+        id: textEditor.id!,
+        type: "textEdit",
+        pageIndex: textEditor.pageIndex,
+        xRatio: textEditor.xRatio,
+        yRatio: textEditor.yRatio,
+        wRatio: r.wRatio,
+        hRatio: r.hRatio,
+        baselineOffsetPt: r.baselineOffsetPt,
+        backgroundColor: r.backgroundColor,
+        text: trimmed,
+        fontSize: r.fontSizePt,
+        fontFamily: r.fontFamily,
+        bold: r.bold,
+        italic: r.italic,
+        color: r.color,
+      };
+      const alreadyExists = objectsRef.current.some((o) => o.id === obj.id);
+      commit(alreadyExists ? objectsRef.current.map((o) => (o.id === obj.id ? obj : o)) : [...objectsRef.current, obj]);
+      setSelectedId(obj.id);
+      setTextEditor(null);
+      // Deliberately stays in the Edit Text tool — editing several existing lines in a row is the expected flow.
+      return;
+    }
+
     if (textEditor.id === null) {
       if (trimmed.trim()) {
         const obj: TextObject = {
@@ -336,7 +521,7 @@ export default function EditPdfPage() {
       setSelectedId(null);
       return;
     }
-    if (activeTool === "text" || activeTool === "image") return;
+    if (activeTool === "text" || activeTool === "image" || activeTool === "editText") return;
     const { xRatio, yRatio } = ratioFromEvent(e);
 
     if (activeTool === "draw") {
@@ -831,7 +1016,63 @@ export default function EditPdfPage() {
               })}
             </svg>
 
+            {activeTool === "editText" &&
+              textRuns
+                .filter((run) => run.pageIndex === pageIndex && !pageObjects.some((o) => o.id === run.id))
+                .map((run) => (
+                  <div
+                    key={run.id}
+                    data-hover="true"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditingRun(run);
+                    }}
+                    title="Click to edit this text"
+                    className="absolute cursor-text rounded-sm border border-dashed border-transparent hover:border-brand-blue/60 hover:bg-brand-blue/5"
+                    style={{
+                      left: run.xRatio * PREVIEW_WIDTH,
+                      top: run.yRatio * previewHeight,
+                      width: run.wRatio * PREVIEW_WIDTH,
+                      height: run.hRatio * previewHeight,
+                    }}
+                  />
+                ))}
+
             {pageObjects.map((o) => {
+              if (o.type === "textEdit") {
+                if (textEditor && textEditor.id === o.id) return null;
+                const matchingRun = textRuns.find((r) => r.id === o.id);
+                return (
+                  <div
+                    key={o.id}
+                    data-hover="true"
+                    onPointerDown={(e) => beginObjectDrag(e, o)}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      if (matchingRun) startEditingRun(matchingRun);
+                    }}
+                    className={`group absolute flex cursor-move touch-none select-none items-end overflow-hidden whitespace-pre px-px ${
+                      selectedId === o.id ? "outline outline-2 outline-brand-blue" : ""
+                    }`}
+                    style={{
+                      left: o.xRatio * PREVIEW_WIDTH,
+                      top: o.yRatio * previewHeight,
+                      width: o.wRatio * PREVIEW_WIDTH,
+                      height: o.hRatio * previewHeight,
+                      backgroundColor: cssColor(o.backgroundColor),
+                      fontSize: o.fontSize * previewScale,
+                      fontFamily: FONT_STACKS[o.fontFamily],
+                      fontWeight: o.bold ? 700 : 400,
+                      fontStyle: o.italic ? "italic" : "normal",
+                      color: cssColor(o.color),
+                      lineHeight: 1,
+                    }}
+                  >
+                    {o.text}
+                  </div>
+                );
+              }
+
               if (o.type === "text") {
                 if (textEditor && textEditor.id === o.id) return null;
                 return (
@@ -939,17 +1180,35 @@ export default function EditPdfPage() {
                   }
                 }}
                 rows={1}
-                className="absolute z-10 min-w-[40px] resize-none overflow-hidden rounded border border-brand-blue bg-white/90 px-1 outline-none"
-                style={{
-                  left: textEditor.xRatio * PREVIEW_WIDTH,
-                  top: textEditor.yRatio * previewHeight,
-                  fontSize: style.fontSize * previewScale,
-                  fontFamily: FONT_STACKS[style.fontFamily],
-                  fontWeight: style.bold ? 700 : 400,
-                  fontStyle: style.italic ? "italic" : "normal",
-                  color: cssColor(style.textColor),
-                  lineHeight: 1.25,
-                }}
+                className={`absolute z-10 resize-none overflow-hidden rounded border border-brand-blue px-1 outline-none ${
+                  textEditor.runEdit ? "" : "min-w-[40px] bg-white/90"
+                }`}
+                style={
+                  textEditor.runEdit
+                    ? {
+                        left: textEditor.xRatio * PREVIEW_WIDTH,
+                        top: textEditor.yRatio * previewHeight,
+                        width: textEditor.runEdit.wRatio * PREVIEW_WIDTH,
+                        height: textEditor.runEdit.hRatio * previewHeight,
+                        fontSize: textEditor.runEdit.fontSizePt * previewScale,
+                        fontFamily: FONT_STACKS[textEditor.runEdit.fontFamily],
+                        fontWeight: textEditor.runEdit.bold ? 700 : 400,
+                        fontStyle: textEditor.runEdit.italic ? "italic" : "normal",
+                        color: cssColor(textEditor.runEdit.color),
+                        backgroundColor: cssColor(textEditor.runEdit.backgroundColor),
+                        lineHeight: 1,
+                      }
+                    : {
+                        left: textEditor.xRatio * PREVIEW_WIDTH,
+                        top: textEditor.yRatio * previewHeight,
+                        fontSize: style.fontSize * previewScale,
+                        fontFamily: FONT_STACKS[style.fontFamily],
+                        fontWeight: style.bold ? 700 : 400,
+                        fontStyle: style.italic ? "italic" : "normal",
+                        color: cssColor(style.textColor),
+                        lineHeight: 1.25,
+                      }
+                }
               />
               )}
             </div>
@@ -1005,7 +1264,8 @@ function PropertyPanel({
 
   if (!kind || kind === "image") return null;
 
-  const isText = kind === "text";
+  const isText = kind === "text" || kind === "textEdit";
+  const selectedText = selected && (selected.type === "text" || selected.type === "textEdit") ? selected : null;
   const isBox = kind === "box" || (selected?.type === "shape" && isBoxShape(selected));
   const isLine = kind === "line" || (selected?.type === "shape" && isLineShape(selected));
   const isDraw = kind === "draw";
@@ -1026,7 +1286,7 @@ function PropertyPanel({
       {isText && (
         <>
           <select
-            value={selected?.type === "text" ? selected.fontFamily : style.fontFamily}
+            value={selectedText ? selectedText.fontFamily : style.fontFamily}
             onChange={(e) => {
               const fontFamily = e.target.value as FontFamily;
               setStyle((s) => ({ ...s, fontFamily }));
@@ -1045,7 +1305,7 @@ function PropertyPanel({
             type="number"
             min={8}
             max={96}
-            value={selected?.type === "text" ? selected.fontSize : style.fontSize}
+            value={selectedText ? selectedText.fontSize : style.fontSize}
             onChange={(e) => {
               const fontSize = Number(e.target.value) || 16;
               setStyle((s) => ({ ...s, fontSize }));
@@ -1057,28 +1317,28 @@ function PropertyPanel({
 
           <button
             type="button"
-            aria-pressed={selected?.type === "text" ? selected.bold : style.bold}
+            aria-pressed={selectedText ? selectedText.bold : style.bold}
             onClick={() => {
-              const bold = !(selected?.type === "text" ? selected.bold : style.bold);
+              const bold = !(selectedText ? selectedText.bold : style.bold);
               setStyle((s) => ({ ...s, bold }));
               if (selected) updateSelected({ bold });
             }}
             className={`flex h-8 w-8 items-center justify-center rounded-lg border ${
-              (selected?.type === "text" ? selected.bold : style.bold) ? "border-brand-blue bg-brand-blue/10 text-brand-blue-deep" : "border-brand-brown-dark/15 bg-white text-brand-brown-dark"
+              (selectedText ? selectedText.bold : style.bold) ? "border-brand-blue bg-brand-blue/10 text-brand-blue-deep" : "border-brand-brown-dark/15 bg-white text-brand-brown-dark"
             }`}
           >
             <Bold size={14} />
           </button>
           <button
             type="button"
-            aria-pressed={selected?.type === "text" ? selected.italic : style.italic}
+            aria-pressed={selectedText ? selectedText.italic : style.italic}
             onClick={() => {
-              const italic = !(selected?.type === "text" ? selected.italic : style.italic);
+              const italic = !(selectedText ? selectedText.italic : style.italic);
               setStyle((s) => ({ ...s, italic }));
               if (selected) updateSelected({ italic });
             }}
             className={`flex h-8 w-8 items-center justify-center rounded-lg border ${
-              (selected?.type === "text" ? selected.italic : style.italic) ? "border-brand-blue bg-brand-blue/10 text-brand-blue-deep" : "border-brand-brown-dark/15 bg-white text-brand-brown-dark"
+              (selectedText ? selectedText.italic : style.italic) ? "border-brand-blue bg-brand-blue/10 text-brand-blue-deep" : "border-brand-brown-dark/15 bg-white text-brand-brown-dark"
             }`}
           >
             <Italic size={14} />
@@ -1086,7 +1346,7 @@ function PropertyPanel({
 
           <ColorSwatch
             label="Text color"
-            value={selected?.type === "text" ? selected.color : style.textColor}
+            value={selectedText ? selectedText.color : style.textColor}
             onChange={(c) => {
               setStyle((s) => ({ ...s, textColor: c }));
               if (selected) updateSelected({ color: c });

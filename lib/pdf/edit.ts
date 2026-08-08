@@ -26,6 +26,34 @@ export type TextObject = {
   color: RGB;
 };
 
+/**
+ * Represents replacing a line of text that already existed in the PDF.
+ * Rendered as a solid background-color rectangle covering the original
+ * run's bbox, with the new text drawn on top — both vector, so the rest of
+ * the page stays selectable (unlike redact, which rasterizes the whole
+ * page). Like "cover", the original glyphs are still technically present
+ * underneath in the content stream, just visually and functionally
+ * replaced — this is editing, not redaction.
+ */
+export type TextEditObject = {
+  id: string;
+  type: "textEdit";
+  pageIndex: number;
+  xRatio: number;
+  yRatio: number;
+  wRatio: number;
+  hRatio: number;
+  /** Distance in PDF points from the box's top (yRatio) down to the text baseline. */
+  baselineOffsetPt: number;
+  backgroundColor: RGB;
+  text: string;
+  fontSize: number;
+  fontFamily: FontFamily;
+  bold: boolean;
+  italic: boolean;
+  color: RGB;
+};
+
 export type BoxShapeKind = "rectangle" | "ellipse" | "highlight" | "cover" | "redact";
 export type LineShapeKind = "line" | "arrow";
 export type ShapeKind = BoxShapeKind | LineShapeKind;
@@ -83,7 +111,7 @@ export type DrawObject = {
   strokeWidth: number;
 };
 
-export type EditObject = TextObject | ShapeObject | ImageObject | DrawObject;
+export type EditObject = TextObject | TextEditObject | ShapeObject | ImageObject | DrawObject;
 
 export function isBoxShape(shape: ShapeObject): shape is BoxShapeObject {
   return (
@@ -168,6 +196,25 @@ export async function applyPdfEdits(bytes: ArrayBuffer, objects: EditObject[]): 
           color: toPdfColor(obj.color),
         });
       });
+      continue;
+    }
+
+    if (obj.type === "textEdit") {
+      const x = obj.xRatio * width;
+      const w = obj.wRatio * width;
+      const h = obj.hRatio * height;
+      const yTop = height - obj.yRatio * height;
+      page.drawRectangle({ x, y: yTop - h, width: w, height: h, color: toPdfColor(obj.backgroundColor) });
+      if (obj.text.trim()) {
+        const font = await getFont(obj.fontFamily, obj.bold, obj.italic);
+        page.drawText(obj.text, {
+          x,
+          y: yTop - obj.baselineOffsetPt,
+          size: obj.fontSize,
+          font,
+          color: toPdfColor(obj.color),
+        });
+      }
       continue;
     }
 
