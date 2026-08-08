@@ -35,6 +35,8 @@ import tempfile
 from flask import Flask, Response, jsonify, request
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
+from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
+from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from pdf2docx import Converter
@@ -110,6 +112,7 @@ _THIN_SIDE = Side(style="thin", color="000000")
 _CELL_BORDER = Border(left=_THIN_SIDE, right=_THIN_SIDE, top=_THIN_SIDE, bottom=_THIN_SIDE)
 _HEADER_FILL = PatternFill(start_color="E7EAF3", end_color="E7EAF3", fill_type="solid")
 _NUMERIC_RE = re.compile(r"^\(?-?\$?\s*\d[\d,]*(\.\d+)?%?\)?$")
+_NUMERIC_CHARS_RE = re.compile(r"^[\d\s,.$%()\-]+$")
 # "1,08,519.00" — a group of exactly 2 digits before the final group of 3 is the
 # Indian lakh/crore convention, which Excel's plain #,##0 would regroup wrongly.
 _INDIAN_GROUPING_RE = re.compile(r"\d,\d{2},\d{3}(\.\d+)?$")
@@ -169,12 +172,20 @@ def _fill_for_bbox(fills, bbox):
 
 
 def _cell_chars(page_chars, bbox):
-    """Characters from the page whose center point falls inside a cell's bounding box."""
+    """Inked characters whose center point falls inside a cell's bounding box.
+
+    Whitespace glyphs are dropped deliberately. Spreadsheet exporters pad cells
+    with space characters that span the full column, so counting them would put
+    the apparent text extent flush against both edges and make every value look
+    left-aligned — and would let unstyled padding outvote the real text when
+    deciding weight and color."""
     if not bbox:
         return []
     x0, top, x1, bottom = bbox
     out = []
     for c in page_chars:
+        if not (c.get("text") or "").strip():
+            continue
         cx = (c["x0"] + c["x1"]) / 2
         cy = (c["top"] + c["bottom"]) / 2
         if x0 - 1 <= cx <= x1 + 1 and top - 1 <= cy <= bottom + 1:
@@ -236,11 +247,16 @@ def _horizontal_alignment(chars, bbox):
     if left_gap < 0 or right_gap < 0:
         return None
 
-    tolerance = max(2.0, width * 0.03)
+    # Judge centering by how far the text's midpoint sits from the cell's,
+    # as a fraction of the cell — comparing the two gaps directly is too
+    # strict, since a visually centered heading in a wide merged cell is
+    # routinely a good 10pt lopsided. Padding on both sides must still be
+    # substantial, otherwise text that merely fills its cell reads as centered.
     deliberate_padding = max(3.0, width * 0.06)
-    if abs(left_gap - right_gap) <= tolerance and min(left_gap, right_gap) >= deliberate_padding:
+    midpoint_offset = (left_gap - right_gap) / 2.0
+    if abs(midpoint_offset) <= width * 0.06 and min(left_gap, right_gap) >= deliberate_padding:
         return "center"
-    if right_gap + tolerance < left_gap:
+    if right_gap + max(2.0, width * 0.02) < left_gap:
         return "right"
     return "left"
 
@@ -252,6 +268,11 @@ def _parse_numeric_cell(text: str):
     numbers, zip codes, IDs) are deliberately left as text — converting "007"
     to 7 would silently change what the cell displays."""
     t = text.strip()
+    # Glyph positioning routinely splits a number mid-way when it's extracted
+    # ("78,044.00" comes back as "7 8,044.00"), so close those gaps before
+    # matching — otherwise the amount silently stays text and loses its format.
+    if t and _NUMERIC_CHARS_RE.match(t):
+        t = re.sub(r"\s+", "", t)
     if not t or not _NUMERIC_RE.match(t):
         return None
     is_percent = t.endswith("%")
@@ -262,6 +283,11 @@ def _parse_numeric_cell(text: str):
         return None
     int_part = cleaned.split(".")[0]
     if len(int_part) > 1 and int_part[0] == "0" and not is_currency and not is_percent:
+        return None
+    # A long unpunctuated run of digits is an identifier — an account or phone
+    # number — not a quantity. Excel would render it in scientific notation and
+    # can't hold more than 15 significant digits anyway, so keep it as text.
+    if len(int_part) > 11 and not is_currency and not is_percent and "," not in t and "." not in t:
         return None
     try:
         value = float(cleaned)
@@ -289,7 +315,7 @@ def _number_format_for(text: str, is_currency: bool, is_percent: bool) -> str:
     return f'"$"{base}' if is_currency else base
 
 
-_POINTS_TO_PIXELS = 96 / 72  # Excel positions drawings in pixels at 96dpi
+_EMU_PER_POINT = 12700  # Excel positions drawings in English Metric Units
 _ARTWORK_RENDER_DPI = 200
 
 
@@ -316,16 +342,31 @@ def _artwork_rects(mupdf_page):
     return [r for r in rects if r.width > 2 and r.height > 2]
 
 
-def _add_cell_artwork(ws, pdf_path, page_number, cells, row_map):
-    """Renders any cell whose content is artwork rather than text — the
-    letterhead logo, a signature block — and drops it into the matching
-    worksheet cell at its on-page size. Rendering the cell region (instead of
-    lifting the raster out) is what makes this work for vector logos too.
-    Best effort throughout: artwork that won't render is skipped, never fatal."""
-    candidates = [c for c in cells if not (c["text"] or "").strip() and c["row"] in row_map]
-    if not candidates:
-        return
+def _host_cell_for(cells, row_map, rect):
+    """The tightest written cell the artwork sits inside."""
+    cx = (rect.x0 + rect.x1) / 2
+    cy = (rect.y0 + rect.y1) / 2
+    best = None
+    for item in cells:
+        if item["row"] not in row_map:
+            continue
+        x0, top, x1, bottom = item["bbox"]
+        if x0 - 1 <= cx <= x1 + 1 and top - 1 <= cy <= bottom + 1:
+            area = (x1 - x0) * (bottom - top)
+            if best is None or area < best[0]:
+                best = (area, item)
+    return best[1] if best else None
 
+
+def _add_cell_artwork(ws, pdf_path, page_number, cells, row_map):
+    """Places the page's artwork — letterhead logo, signature — into the sheet.
+
+    Each piece is rendered at exactly its own bounds and offset within its
+    host cell, rather than rendering the whole cell region: a logo occupying
+    part of a wide header cell would otherwise be blown up to the cell's width
+    and drag the neighbouring title in with it. Rendering (rather than lifting
+    the raster out) keeps vector logos working too. Best effort throughout —
+    artwork that won't render is skipped, never fatal."""
     try:
         doc = pymupdf.open(pdf_path)
     except Exception:  # noqa: BLE001
@@ -335,22 +376,36 @@ def _add_cell_artwork(ws, pdf_path, page_number, cells, row_map):
         art = _artwork_rects(mupdf_page)
         if not art:
             return
-        for item in candidates:
+        page_area = mupdf_page.rect.get_area() or 1.0
+        placed = []
+        for rect in art:
             try:
-                cell_rect = pymupdf.Rect(*item["bbox"])
-                if cell_rect.is_empty:
+                if rect.get_area() > 0.5 * page_area:
+                    continue  # a full-page scan or background, not a mark
+                # A single logo is frequently two stacked images (art plus its
+                # mask) at identical coordinates — render that spot only once.
+                if any(abs(rect.x0 - p.x0) < 2 and abs(rect.y0 - p.y0) < 2
+                       and abs(rect.x1 - p.x1) < 2 and abs(rect.y1 - p.y1) < 2 for p in placed):
                     continue
-                # Require the artwork to genuinely sit in this cell, so a curve
-                # that merely clips a neighbouring border doesn't drag a render in.
-                if not any((r & cell_rect).get_area() > 0.4 * r.get_area() for r in art):
+                host = _host_cell_for(cells, row_map, rect)
+                if host is None:
                     continue
-                pix = mupdf_page.get_pixmap(clip=cell_rect, dpi=_ARTWORK_RENDER_DPI)
+                pix = mupdf_page.get_pixmap(clip=rect, dpi=_ARTWORK_RENDER_DPI)
                 image = XLImage(io.BytesIO(pix.tobytes("png")))
-                image.width = max(1, int(cell_rect.width * _POINTS_TO_PIXELS))
-                image.height = max(1, int(cell_rect.height * _POINTS_TO_PIXELS))
-                anchor = f"{get_column_letter(item['col'] + 1)}{row_map[item['row']] + 1}"
-                ws.add_image(image, anchor)
-            except Exception:  # noqa: BLE001 — skip just this cell
+                image.anchor = OneCellAnchor(
+                    _from=AnchorMarker(
+                        col=host["col"],
+                        colOff=int(max(0.0, rect.x0 - host["bbox"][0]) * _EMU_PER_POINT),
+                        row=row_map[host["row"]],
+                        rowOff=int(max(0.0, rect.y0 - host["bbox"][1]) * _EMU_PER_POINT),
+                    ),
+                    ext=XDRPositiveSize2D(
+                        int(rect.width * _EMU_PER_POINT), int(rect.height * _EMU_PER_POINT)
+                    ),
+                )
+                ws.add_image(image)
+                placed.append(rect)
+            except Exception:  # noqa: BLE001 — skip just this piece
                 continue
     finally:
         doc.close()
