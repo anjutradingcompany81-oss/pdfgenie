@@ -2,7 +2,7 @@
 
 import { GalleryHorizontal, Loader2, MoveUp, MoveDown, X } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -13,7 +13,7 @@ import { downloadBlob } from "@/lib/pdf/download";
 export default function MergeImagesPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [direction, setDirection] = useState<MergeDirection>("vertical");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 

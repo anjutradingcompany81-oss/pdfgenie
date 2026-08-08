@@ -2,7 +2,7 @@
 
 import { FileDiff, Loader2, ChevronDown, Plus, Minus, FileText } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -12,7 +12,7 @@ import { comparePdfs, type PageComparison } from "@/lib/pdf/compare";
 export default function ComparePdfPage() {
   const [fileA, setFileA] = useState<File | null>(null);
   const [fileB, setFileB] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<PageComparison[] | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());

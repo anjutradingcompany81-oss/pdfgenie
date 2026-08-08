@@ -2,7 +2,7 @@
 
 import { FileVideo, Loader2, ShieldAlert } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { MagneticButton } from "@/components/ui/MagneticButton";
@@ -56,7 +56,7 @@ function compressVideo(
 export default function CompressVideoPage() {
   const [file, setFile] = useState<File | null>(null);
   const [quality, setQuality] = useState<string>("balanced");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);

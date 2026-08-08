@@ -2,7 +2,7 @@
 
 import { Captions, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { MagneticButton } from "@/components/ui/MagneticButton";
@@ -35,7 +35,7 @@ function transcribeVideo(file: File, onProgress: (pct: number) => void): Promise
 export default function VideoToTextPage() {
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 

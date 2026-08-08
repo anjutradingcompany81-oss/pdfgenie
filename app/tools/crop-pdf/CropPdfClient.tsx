@@ -2,7 +2,7 @@
 
 import { Crop, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -20,7 +20,7 @@ export default function CropPdfPage() {
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
   const [pageSizePt, setPageSizePt] = useState({ width: 0, height: 0 });
   const [box, setBox] = useState<RatioBox>(DEFAULT_BOX);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
 
   const canvasHost = useRef<HTMLDivElement>(null);

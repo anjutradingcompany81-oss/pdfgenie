@@ -2,7 +2,7 @@
 
 import { Signature, Loader2, ChevronLeft, ChevronRight, Copy, Check, Info } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { MagneticButton } from "@/components/ui/MagneticButton";
@@ -20,7 +20,7 @@ export default function RequestSignaturePage() {
   const [pageSizePt, setPageSizePt] = useState({ width: 0, height: 0 });
   const [dragBox, setDragBox] = useState<Box | null>(null);
   const [lastPageIndex, setLastPageIndex] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);

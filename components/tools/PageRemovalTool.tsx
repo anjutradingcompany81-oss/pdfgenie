@@ -2,7 +2,7 @@
 
 import { Loader2, type LucideIcon } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -37,7 +37,7 @@ export function PageRemovalTool({
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
 
   async function handleFile(files: File[]) {

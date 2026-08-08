@@ -2,7 +2,7 @@
 
 import { Images, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -12,7 +12,7 @@ import { downloadBlob } from "@/lib/pdf/download";
 
 export default function ExtractImagesPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ extracted: number; skipped: number } | null>(null);
 

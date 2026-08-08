@@ -2,7 +2,7 @@
 
 import { Languages, Loader2, ArrowRightLeft } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { recordToolUsage } from "@/lib/tool-usage-client";
 
@@ -26,7 +26,7 @@ export default function TranslatePage() {
   const [source, setSource] = useState("en");
   const [target, setTarget] = useState("hi");
   const [result, setResult] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
 
   function swap() {

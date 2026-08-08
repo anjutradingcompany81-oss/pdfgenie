@@ -3,14 +3,14 @@
 import { QrCode, Loader2 } from "lucide-react";
 import QRCodeLib from "qrcode";
 import { useEffect, useRef, useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { downloadBlob } from "@/lib/pdf/download";
 
 export default function QrCodeGeneratorPage() {
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 

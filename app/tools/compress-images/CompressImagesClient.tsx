@@ -3,7 +3,7 @@
 import { Minimize2, Loader2, X } from "lucide-react";
 import JSZip from "jszip";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -21,7 +21,7 @@ export default function CompressImagesPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [quality, setQuality] = useState(70);
   const [format, setFormat] = useState<CompressFormat>("image/jpeg");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ before: number; after: number } | null>(null);
 

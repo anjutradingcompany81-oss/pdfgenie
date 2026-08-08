@@ -2,7 +2,7 @@
 
 import { ScanSearch, Loader2, Check, X, Info } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -10,7 +10,7 @@ import { checkPdfACompliance, type ComplianceReport } from "@/lib/pdf/pdfa-check
 
 export default function PdfaCheckPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<ComplianceReport | null>(null);
 

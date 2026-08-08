@@ -2,7 +2,7 @@
 
 import { RefreshCw, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -47,7 +47,7 @@ export default function ConvertImagePage() {
 function PdfToImage() {
   const [file, setFile] = useState<File | null>(null);
   const [format, setFormat] = useState<"png" | "jpeg">("png");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,7 +121,7 @@ function PdfToImage() {
 
 function ImageToPdf() {
   const [files, setFiles] = useState<File[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
 
   function addFiles(newFiles: File[]) {

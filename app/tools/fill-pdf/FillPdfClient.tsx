@@ -2,7 +2,7 @@
 
 import { FormInput, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -15,7 +15,7 @@ export default function FillPdfPage() {
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
   const [fields, setFields] = useState<FormFieldDescriptor[]>([]);
   const [values, setValues] = useState<Record<string, string | boolean>>({});
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 

@@ -2,7 +2,7 @@
 
 import { Scaling, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -25,7 +25,7 @@ export default function ResizePdfPage() {
   const [presetId, setPresetId] = useState<(typeof PRESETS)[number]["id"]>("a4");
   const [widthMm, setWidthMm] = useState(210);
   const [heightMm, setHeightMm] = useState(297);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 

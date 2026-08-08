@@ -2,7 +2,7 @@
 
 import { Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -42,7 +42,7 @@ function AddPassword() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
@@ -172,7 +172,7 @@ function friendlyRemoveError(err: unknown): string {
 function RemovePassword() {
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 

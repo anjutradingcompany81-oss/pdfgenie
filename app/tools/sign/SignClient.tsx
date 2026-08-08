@@ -2,7 +2,7 @@
 
 import { PenTool, Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -25,7 +25,7 @@ export default function SignPage() {
   const [pageSizePt, setPageSizePt] = useState({ width: 0, height: 0 });
   const [stamp, setStamp] = useState<Stamp | null>(null);
   const [box, setBox] = useState<Box | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [error, setError] = useState<string | null>(null);
 
   const canvasHost = useRef<HTMLDivElement>(null);

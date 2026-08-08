@@ -456,3 +456,19 @@ html.has-custom-cursor * {
   color: var(--color-status-success);
   flex-shrink: 0;
 }
+
+/* Indeterminate progress for tool runs that can't report a percentage. */
+@keyframes tool-progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.tool-progress-indeterminate {
+  animation: tool-progress-slide 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-progress-indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}

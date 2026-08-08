@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Lock, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { CheckoutButton } from "@/components/billing/CheckoutButton";
+import { ToolOutput } from "@/components/tools/ToolOutput";
 import { TOOL_USED_EVENT } from "@/lib/tool-usage-client";
 
 type ToolShellProps = {
@@ -14,6 +15,10 @@ type ToolShellProps = {
   /** Mail Merge has its own, more specific per-plan limits — it opts out of this generic gate. */
   skipUsageGate?: boolean;
 };
+
+// Re-exported here so a tool picks up progress reporting by extending the
+// import it already has, rather than adding another one.
+export { useToolBusy } from "@/lib/tools/use-tool-busy";
 
 type GateState = "checking" | "allowed" | "blocked";
 
@@ -110,7 +115,10 @@ export function ToolShell({ icon: Icon, title, description, children, skipUsageG
               </div>
             </div>
           ) : (
-            children
+            <>
+              {children}
+              <ToolOutput />
+            </>
           )}
         </div>
       </div>

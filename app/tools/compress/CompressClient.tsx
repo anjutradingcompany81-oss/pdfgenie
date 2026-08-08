@@ -2,7 +2,7 @@
 
 import { FileArchive, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { ToolShell } from "@/components/tools/ToolShell";
+import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
 import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
@@ -20,7 +20,7 @@ function formatSize(bytes: number) {
 export default function CompressPage() {
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<Mode>("standard");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useToolBusy();
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ before: number; after: number } | null>(null);
