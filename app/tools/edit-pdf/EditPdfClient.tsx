@@ -22,6 +22,8 @@ import {
   Bold,
   Italic,
   Edit3,
+  ScanText,
+  AlertTriangle,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
@@ -32,6 +34,8 @@ import { EditPageThumbRail } from "@/components/tools/EditPageThumbRail";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { getPageCount, getPageSize, renderPageToCanvas } from "@/lib/pdf/pdfjs";
 import { extractTextRuns, type TextRun } from "@/lib/pdf/text-runs";
+import { pageLooksScanned, runOcrOnPage, OCR_LANGUAGES, type OcrLanguage } from "@/lib/pdf/ocr-runs";
+import { publishToolProgress } from "@/lib/tools/tool-output";
 import { downloadBlob, bytesToBlob } from "@/lib/pdf/download";
 import {
   applyPdfEdits,
@@ -246,6 +250,18 @@ export default function EditPdfPage() {
   const [style, setStyle] = useState<Style>(DEFAULT_STYLE);
   const [textRuns, setTextRuns] = useState<TextRun[]>([]);
 
+  // Scanned-page OCR: `scannedPage` is re-derived per page (null while
+  // checking); `ocrRunsByPage` accumulates recognized lines separately from
+  // `textRuns` because that state is wholesale replaced every time the page
+  // changes (see the extractTextRuns effect below) — folding OCR results
+  // into it directly would lose them the moment the user flipped away and
+  // back to the page they just ran OCR on.
+  const [scannedPages, setScannedPages] = useState<Record<number, boolean>>({});
+  const [ocrLang, setOcrLang] = useState<OcrLanguage>("eng");
+  const [ocrRunsByPage, setOcrRunsByPage] = useState<Record<number, TextRun[]>>({});
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrProgressPct, setOcrProgressPct] = useState(0);
+
   const canvasHost = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -305,6 +321,8 @@ export default function EditPdfPage() {
       setSelectedId(null);
       setTextEditor(null);
       setActiveTool("select");
+      setOcrRunsByPage({});
+      setScannedPages({});
     } catch {
       setError("Couldn't read that PDF — it may be corrupted or password-protected.");
     }
@@ -321,6 +339,8 @@ export default function EditPdfPage() {
     setSelectedId(null);
     setTextEditor(null);
     setError(null);
+    setOcrRunsByPage({});
+    setScannedPages({});
   }
 
   useEffect(() => {
@@ -374,6 +394,54 @@ export default function EditPdfPage() {
       cancelled = true;
     };
   }, [buffer, pageIndex]);
+
+  // Detects whether the current page is a scan (an image with no text
+  // layer) so the "Run OCR" prompt only appears where it's actually needed
+  // — not on a page whose text just hasn't loaded yet, and not on a
+  // genuinely blank page with nothing for OCR to find either.
+  useEffect(() => {
+    if (!buffer) return;
+    let cancelled = false;
+    pageLooksScanned(buffer, pageIndex)
+      .then((scanned) => {
+        if (!cancelled) setScannedPages((prev) => ({ ...prev, [pageIndex]: scanned }));
+      })
+      .catch(() => {
+        if (!cancelled) setScannedPages((prev) => ({ ...prev, [pageIndex]: false }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [buffer, pageIndex]);
+
+  async function handleRunOcr() {
+    if (!buffer || ocrBusy) return;
+    setOcrBusy(true);
+    setOcrProgressPct(0);
+    setError(null);
+    publishToolProgress({ active: true, label: "Loading OCR engine…", percent: 0 });
+    try {
+      const runs = await runOcrOnPage(buffer, pageIndex, ocrLang, (p) => {
+        const pct = p.status === "recognizing text" ? Math.round(p.progress * 100) : 0;
+        setOcrProgressPct(pct);
+        publishToolProgress({
+          active: true,
+          label: p.status === "recognizing text" ? "Recognizing text…" : "Loading OCR engine…",
+          percent: pct,
+        });
+      });
+      setOcrRunsByPage((prev) => ({ ...prev, [pageIndex]: runs }));
+      setActiveTool("editText");
+      if (runs.length === 0) {
+        setError("OCR didn't find any recognizable text on this page.");
+      }
+    } catch {
+      setError("OCR couldn't process this page — try a clearer scan or a different language.");
+    } finally {
+      setOcrBusy(false);
+      publishToolProgress({ active: false });
+    }
+  }
 
   function ratioFromEvent(e: { clientX: number; clientY: number }) {
     const rect = previewRef.current!.getBoundingClientRect();
@@ -803,6 +871,10 @@ export default function EditPdfPage() {
   }
 
   const pageObjects = objects.filter((o) => o.pageIndex === pageIndex);
+  // Runs detected in the PDF's own text layer, plus any this page's OCR
+  // pass has recognized — merged so every hitbox below (and the
+  // double-click-to-reopen lookup) treats both sources identically.
+  const currentPageRuns = [...textRuns.filter((r) => r.pageIndex === pageIndex), ...(ocrRunsByPage[pageIndex] ?? [])];
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
@@ -917,6 +989,63 @@ export default function EditPdfPage() {
           {/* Property panel */}
           <PropertyPanel activeTool={activeTool} selected={selected} style={style} setStyle={setStyle} updateSelected={updateSelected} />
 
+          {activeTool === "editText" && scannedPages[pageIndex] && !ocrRunsByPage[pageIndex] && (
+            <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2.5">
+                <ScanText size={18} className="mt-0.5 shrink-0 text-amber-700" />
+                <div>
+                  <p className="text-sm font-semibold text-brand-brown-dark">This page looks like a scanned image</p>
+                  <p className="text-xs text-brand-brown-dark/70">
+                    It has no selectable text layer, so nothing here is clickable yet. Run OCR to recognize the
+                    text and make it editable.
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <select
+                  value={ocrLang}
+                  onChange={(e) => setOcrLang(e.target.value as OcrLanguage)}
+                  disabled={ocrBusy}
+                  className="h-9 rounded-lg border border-brand-brown-dark/15 bg-white px-2 text-xs text-brand-brown-dark"
+                  aria-label="OCR language"
+                >
+                  {OCR_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  data-hover="true"
+                  onClick={handleRunOcr}
+                  disabled={ocrBusy}
+                  className="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-lg bg-amber-600 px-3.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                >
+                  {ocrBusy ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      {ocrProgressPct > 0 ? `Recognizing… ${ocrProgressPct}%` : "Starting…"}
+                    </>
+                  ) : (
+                    <>
+                      <ScanText size={14} />
+                      Run OCR and Enable Editing
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTool === "editText" && ocrRunsByPage[pageIndex] && (
+            <div className="flex items-center gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-brand-brown-dark/80">
+              <AlertTriangle size={14} className="shrink-0 text-amber-700" />
+              Text on this page was recognized with OCR, not read from the PDF directly — please double-check it
+              for mistakes before saving.
+            </div>
+          )}
+
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
             <EditPageThumbRail
               fileBuffer={buffer}
@@ -1017,18 +1146,25 @@ export default function EditPdfPage() {
             </svg>
 
             {activeTool === "editText" &&
-              textRuns
-                .filter((run) => run.pageIndex === pageIndex && !pageObjects.some((o) => o.id === run.id))
+              currentPageRuns
+                .filter((run) => !pageObjects.some((o) => o.id === run.id))
                 .map((run) => (
                   <div
                     key={run.id}
                     data-hover="true"
                     onClick={(e) => {
                       e.stopPropagation();
+                      // eslint-disable-next-line react-hooks/refs -- runs only from this click handler, same as the identical call a few lines below that isn't flagged; startEditingRun's ref reads never happen during render.
                       startEditingRun(run);
                     }}
-                    title="Click to edit this text"
-                    className="absolute cursor-text rounded-sm border border-dashed border-transparent hover:border-brand-blue/60 hover:bg-brand-blue/5"
+                    title={
+                      run.source === "ocr"
+                        ? "Recognized via OCR — click to edit, and please double-check this text"
+                        : "Click to edit this text"
+                    }
+                    className={`absolute cursor-text rounded-sm border border-dashed border-transparent ${
+                      run.source === "ocr" ? "hover:border-amber-500/70 hover:bg-amber-400/10" : "hover:border-brand-blue/60 hover:bg-brand-blue/5"
+                    }`}
                     style={{
                       left: run.xRatio * PREVIEW_WIDTH,
                       top: run.yRatio * previewHeight,
@@ -1041,7 +1177,7 @@ export default function EditPdfPage() {
             {pageObjects.map((o) => {
               if (o.type === "textEdit") {
                 if (textEditor && textEditor.id === o.id) return null;
-                const matchingRun = textRuns.find((r) => r.id === o.id);
+                const matchingRun = currentPageRuns.find((r) => r.id === o.id);
                 return (
                   <div
                     key={o.id}

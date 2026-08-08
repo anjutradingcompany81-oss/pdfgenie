@@ -16,20 +16,25 @@ export type TextRun = {
   fontFamily: FontFamily;
   bold: boolean;
   italic: boolean;
+  /** Omitted for runs read straight from the PDF's own text layer. "ocr" marks a run recognized from a scanned/image-only page — see lib/pdf/ocr-runs.ts. */
+  source?: "ocr";
+  /** OCR recognition confidence, 0-100. Only present when source is "ocr". */
+  confidence?: number;
 };
 
 // A glyph typically extends this fraction of its font size above the
 // baseline (ascent) — no font-metrics table is available here, just a
-// reasonable constant that works for common fonts.
-const ASCENT_RATIO = 0.82;
+// reasonable constant that works for common fonts. Exported so
+// lib/pdf/ocr-runs.ts can size OCR-recognized lines on the same basis.
+export const ASCENT_RATIO = 0.82;
 // Box height as a multiple of font size, giving a little breathing room
 // above the ascent and below the descent.
-const LINE_HEIGHT_RATIO = 1.25;
+export const LINE_HEIGHT_RATIO = 1.25;
 // Two items on the same page are treated as the same line if their
 // baselines are within this many PDF points of each other.
 const LINE_BASELINE_TOLERANCE_PT = 2;
 
-function guessFontFamily(name: string): { fontFamily: FontFamily; bold: boolean; italic: boolean } {
+export function guessFontFamily(name: string): { fontFamily: FontFamily; bold: boolean; italic: boolean } {
   const n = name.toLowerCase();
   const bold = n.includes("bold") || n.includes("black") || n.includes("heavy") || n.includes("semibold");
   const italic = n.includes("italic") || n.includes("oblique");
