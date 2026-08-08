@@ -3,8 +3,8 @@
 import {
   FileEdit,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
+  ChevronUp,
+  ChevronDown,
   MousePointer2,
   Type,
   Square,
@@ -24,6 +24,18 @@ import {
   Edit3,
   ScanText,
   AlertTriangle,
+  X as XIcon,
+  Check as CheckIcon,
+  PenTool,
+  PanelLeft,
+  ZoomIn,
+  ZoomOut,
+  MoreHorizontal,
+  Files,
+  RotateCw,
+  FilePlus2,
+  Copy,
+  Download,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ToolShell, useToolBusy } from "@/components/tools/ToolShell";
@@ -31,10 +43,12 @@ import { Dropzone } from "@/components/tools/Dropzone";
 import { FileChip } from "@/components/tools/FileChip";
 import { PrivacyNote } from "@/components/tools/PrivacyNote";
 import { EditPageThumbRail } from "@/components/tools/EditPageThumbRail";
+import { SignaturePad } from "@/components/tools/SignaturePad";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { getPageCount, getPageSize, renderPageToCanvas } from "@/lib/pdf/pdfjs";
 import { extractTextRuns, type TextRun } from "@/lib/pdf/text-runs";
 import { pageLooksScanned, runOcrOnPage, OCR_LANGUAGES, type OcrLanguage } from "@/lib/pdf/ocr-runs";
+import { rotatePage, insertBlankPage, duplicatePage, deletePage } from "@/lib/pdf/pages";
 import { publishToolProgress } from "@/lib/tools/tool-output";
 import { downloadBlob, bytesToBlob } from "@/lib/pdf/download";
 import {
@@ -55,22 +69,50 @@ import {
 } from "@/lib/pdf/edit";
 
 const PREVIEW_WIDTH = 640;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.5;
+const ZOOM_STEP = 0.25;
 
-type ToolId = "select" | "text" | "editText" | "rectangle" | "ellipse" | "line" | "arrow" | "highlight" | "cover" | "redact" | "image" | "draw";
+type ToolId =
+  | "select"
+  | "text"
+  | "editText"
+  | "rectangle"
+  | "ellipse"
+  | "line"
+  | "arrow"
+  | "highlight"
+  | "cover"
+  | "redact"
+  | "image"
+  | "draw"
+  | "cross"
+  | "check";
 
-const TOOLS: { id: ToolId; label: string; icon: typeof MousePointer2 }[] = [
-  { id: "select", label: "Select", icon: MousePointer2 },
-  { id: "text", label: "Text", icon: Type },
+// The primary row — the tools someone reaches for constantly. Less common
+// ones live behind "More tools" instead of crowding this row.
+const PRIMARY_TOOLS: { id: ToolId; label: string; icon: typeof MousePointer2 }[] = [
+  { id: "select", label: "Move", icon: MousePointer2 },
+  { id: "text", label: "Add Text", icon: Type },
   { id: "editText", label: "Edit Text", icon: Edit3 },
-  { id: "rectangle", label: "Rectangle", icon: Square },
+  { id: "cover", label: "Eraser", icon: Eraser },
+  { id: "highlight", label: "Highlight", icon: Highlighter },
+  { id: "draw", label: "Pencil", icon: Pencil },
+  { id: "image", label: "Image", icon: ImageIcon },
   { id: "ellipse", label: "Ellipse", icon: Circle },
+];
+
+const STAMP_TOOLS: { id: ToolId; label: string; icon: typeof MousePointer2; color: RGB }[] = [
+  { id: "cross", label: "Cross", icon: XIcon, color: { r: 0.82, g: 0.12, b: 0.12 } },
+  { id: "check", label: "Check", icon: CheckIcon, color: { r: 0.08, g: 0.55, b: 0.2 } },
+];
+
+// Tucked behind "More tools" — still fully functional, just less frequently reached for.
+const MORE_TOOLS: { id: ToolId; label: string; icon: typeof MousePointer2 }[] = [
+  { id: "rectangle", label: "Rectangle", icon: Square },
   { id: "line", label: "Line", icon: Minus },
   { id: "arrow", label: "Arrow", icon: ArrowUpRight },
-  { id: "highlight", label: "Highlight", icon: Highlighter },
-  { id: "cover", label: "Cover", icon: Eraser },
   { id: "redact", label: "Redact", icon: Ban },
-  { id: "image", label: "Image", icon: ImageIcon },
-  { id: "draw", label: "Draw", icon: Pencil },
 ];
 
 const FONT_FAMILIES: FontFamily[] = ["Helvetica", "TimesRoman", "Courier"];
@@ -202,6 +244,7 @@ function sampleRunColors(
 
 const BOX_DEFAULT_KINDS = new Set<BoxShapeKind>(["rectangle", "ellipse", "highlight", "cover", "redact"]);
 const LINE_KINDS = new Set<LineShapeKind>(["line", "arrow"]);
+const STAMP_GLYPH: Record<string, string> = { cross: "✕", check: "✓" };
 
 type DragState =
   | { mode: "move-object"; id: string; grabDx: number; grabDy: number }
@@ -230,6 +273,14 @@ type TextEditorState = {
   };
 };
 
+type PageOp = "rotate" | "insertAfter" | "duplicate" | "delete";
+const PAGE_OP_LABEL: Record<PageOp, string> = {
+  rotate: "Rotate this page 90°",
+  insertAfter: "Insert a blank page after this one",
+  duplicate: "Duplicate this page",
+  delete: "Delete this page",
+};
+
 export default function EditPdfPage() {
   const [file, setFile] = useState<File | null>(null);
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
@@ -250,8 +301,8 @@ export default function EditPdfPage() {
   const [style, setStyle] = useState<Style>(DEFAULT_STYLE);
   const [textRuns, setTextRuns] = useState<TextRun[]>([]);
 
-  // Scanned-page OCR: `scannedPage` is re-derived per page (null while
-  // checking); `ocrRunsByPage` accumulates recognized lines separately from
+  // Scanned-page OCR: `scannedPages` is keyed per page (absent = not yet
+  // checked); `ocrRunsByPage` accumulates recognized lines separately from
   // `textRuns` because that state is wholesale replaced every time the page
   // changes (see the extractTextRuns effect below) — folding OCR results
   // into it directly would lose them the moment the user flipped away and
@@ -261,6 +312,14 @@ export default function EditPdfPage() {
   const [ocrRunsByPage, setOcrRunsByPage] = useState<Record<number, TextRun[]>>({});
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrProgressPct, setOcrProgressPct] = useState(0);
+
+  const [zoom, setZoom] = useState(1);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
+  const [pagesMenuOpen, setPagesMenuOpen] = useState(false);
+  const [signOpen, setSignOpen] = useState(false);
+  const [pendingPageOp, setPendingPageOp] = useState<PageOp | null>(null);
+  const [pageOpBusy, setPageOpBusy] = useState(false);
 
   const canvasHost = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -323,6 +382,7 @@ export default function EditPdfPage() {
       setActiveTool("select");
       setOcrRunsByPage({});
       setScannedPages({});
+      setZoom(1);
     } catch {
       setError("Couldn't read that PDF — it may be corrupted or password-protected.");
     }
@@ -435,8 +495,8 @@ export default function EditPdfPage() {
       if (runs.length === 0) {
         setError("OCR didn't find any recognizable text on this page.");
       }
-    } catch {
-      setError("OCR couldn't process this page — try a clearer scan or a different language.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "OCR couldn't process this page — try a clearer scan or a different language.");
     } finally {
       setOcrBusy(false);
       publishToolProgress({ active: false });
@@ -579,9 +639,31 @@ export default function EditPdfPage() {
   // --- Canvas gestures ------------------------------------------------------------
 
   function handleCanvasClick(e: ReactPointerEvent<HTMLDivElement>) {
-    if (activeTool !== "text") return;
-    const { xRatio, yRatio } = ratioFromEvent(e);
-    startNewText(xRatio, yRatio);
+    if (activeTool === "text") {
+      const { xRatio, yRatio } = ratioFromEvent(e);
+      startNewText(xRatio, yRatio);
+      return;
+    }
+    if (activeTool === "cross" || activeTool === "check") {
+      const { xRatio, yRatio } = ratioFromEvent(e);
+      const stamp = STAMP_TOOLS.find((s) => s.id === activeTool)!;
+      const obj: TextObject = {
+        id: newId(),
+        type: "text",
+        pageIndex,
+        xRatio,
+        yRatio,
+        text: STAMP_GLYPH[activeTool],
+        fontSize: 28,
+        fontFamily: "Helvetica",
+        bold: true,
+        italic: false,
+        color: stamp.color,
+      };
+      commit([...objectsRef.current, obj]);
+      setSelectedId(obj.id);
+      setActiveTool("select");
+    }
   }
 
   function handleCanvasPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
@@ -589,7 +671,7 @@ export default function EditPdfPage() {
       setSelectedId(null);
       return;
     }
-    if (activeTool === "text" || activeTool === "image" || activeTool === "editText") return;
+    if (activeTool === "text" || activeTool === "image" || activeTool === "editText" || activeTool === "cross" || activeTool === "check") return;
     const { xRatio, yRatio } = ratioFromEvent(e);
 
     if (activeTool === "draw") {
@@ -804,6 +886,25 @@ export default function EditPdfPage() {
     imageInputRef.current?.click();
   }
 
+  function placeImageObject(dataUrl: string, mime: "image/png" | "image/jpeg", naturalAspect: number) {
+    const wRatio = 0.35;
+    const hRatio = pageSizePt.height ? (wRatio * pageSizePt.width) / (naturalAspect * pageSizePt.height) : wRatio / naturalAspect;
+    const obj: ImageObject = {
+      id: newId(),
+      type: "image",
+      pageIndex,
+      xRatio: Math.max(0, 0.5 - wRatio / 2),
+      yRatio: Math.max(0, 0.5 - hRatio / 2),
+      wRatio,
+      hRatio,
+      dataUrl,
+      mime,
+    };
+    commit([...objectsRef.current, obj]);
+    setSelectedId(obj.id);
+    setActiveTool("select");
+  }
+
   function handleImageSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
@@ -817,28 +918,63 @@ export default function EditPdfPage() {
     reader.onload = () => {
       const dataUrl = reader.result as string;
       const img = new Image();
-      img.onload = () => {
-        const naturalAspect = img.naturalWidth / img.naturalHeight;
-        const wRatio = 0.35;
-        const hRatio = pageSizePt.height ? (wRatio * pageSizePt.width) / (naturalAspect * pageSizePt.height) : wRatio / naturalAspect;
-        const obj: ImageObject = {
-          id: newId(),
-          type: "image",
-          pageIndex,
-          xRatio: Math.max(0, 0.5 - wRatio / 2),
-          yRatio: Math.max(0, 0.5 - hRatio / 2),
-          wRatio,
-          hRatio,
-          dataUrl,
-          mime,
-        };
-        commit([...objectsRef.current, obj]);
-        setSelectedId(obj.id);
-        setActiveTool("select");
-      };
+      img.onload = () => placeImageObject(dataUrl, mime, img.naturalWidth / img.naturalHeight);
       img.src = dataUrl;
     };
     reader.readAsDataURL(f);
+  }
+
+  function handleSignatureCreated(dataUrl: string, width: number, height: number) {
+    placeImageObject(dataUrl, "image/png", width / height);
+    setSignOpen(false);
+  }
+
+  // --- Page structure operations ------------------------------------------------------
+
+  async function runPageOp(op: PageOp) {
+    if (!buffer) return;
+    setPageOpBusy(true);
+    setError(null);
+    try {
+      let nextBytes: Uint8Array;
+      let nextIndex = pageIndex;
+      let nextCount = pageCount;
+      if (op === "rotate") {
+        nextBytes = await rotatePage(buffer, pageIndex);
+      } else if (op === "insertAfter") {
+        nextBytes = await insertBlankPage(buffer, pageIndex);
+        nextCount = pageCount + 1;
+        nextIndex = pageIndex + 1;
+      } else if (op === "duplicate") {
+        nextBytes = await duplicatePage(buffer, pageIndex);
+        nextCount = pageCount + 1;
+        nextIndex = pageIndex + 1;
+      } else {
+        nextBytes = await deletePage(buffer, pageIndex);
+        nextCount = pageCount - 1;
+        nextIndex = Math.min(pageIndex, nextCount - 1);
+      }
+      const nextBuffer = nextBytes.buffer.slice(nextBytes.byteOffset, nextBytes.byteOffset + nextBytes.byteLength) as ArrayBuffer;
+      setBuffer(nextBuffer);
+      setPageCount(nextCount);
+      setPageIndex(nextIndex);
+      // Page structure just changed underneath every pageIndex-anchored edit
+      // (and a run-replacement edit is additionally anchored to that page's
+      // own geometry) — there's no sound way to carry them across a
+      // rotate/insert/duplicate/delete automatically, so the session is
+      // cleared. The confirmation dialog before calling this warns as much.
+      setLive([]);
+      setHistory([[]]);
+      setHistoryIndex(0);
+      setSelectedId(null);
+      setOcrRunsByPage({});
+      setScannedPages({});
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't update the page.");
+    } finally {
+      setPageOpBusy(false);
+      setPendingPageOp(null);
+    }
   }
 
   // --- Property panel updates ---------------------------------------------------------
@@ -877,59 +1013,58 @@ export default function EditPdfPage() {
   const currentPageRuns = [...textRuns.filter((r) => r.pageIndex === pageIndex), ...(ocrRunsByPage[pageIndex] ?? [])];
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
+  const displayWidth = PREVIEW_WIDTH * zoom;
 
   return (
     <ToolShell
       icon={FileEdit}
       title="Edit a PDF"
-      description="A full editing toolkit — text, shapes, highlights, cover-ups, real redaction, images, and freehand drawing, all on the page."
+      description="A full editing toolkit — text, shapes, highlights, cover-ups, real redaction, images, stamps, signatures, page management, and freehand drawing."
+      wide
     >
       {!file && (
         <Dropzone accept="application/pdf" onFiles={handleFile} label="Drop a PDF here, or click to browse" />
       )}
 
       {file && buffer && (
-        <div className="space-y-5">
-          <FileChip name={file.name} size={file.size} onRemove={reset} />
-
-          {pageCount > 1 && (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                data-hover="true"
-                disabled={pageIndex === 0}
-                onClick={() => setPageIndex((p) => p - 1)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-brown-dark/15 text-brand-brown-dark disabled:opacity-30"
-                aria-label="Previous page"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-sm text-brand-brown-dark/70">
-                Page {pageIndex + 1} of {pageCount}
-              </span>
-              <button
-                type="button"
-                data-hover="true"
-                disabled={pageIndex === pageCount - 1}
-                onClick={() => setPageIndex((p) => p + 1)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-brown-dark/15 text-brand-brown-dark disabled:opacity-30"
-                aria-label="Next page"
-              >
-                <ChevronRight size={16} />
-              </button>
+        <div className="space-y-4">
+          {/* Top action bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-brown-dark/10 bg-white p-3">
+            <FileChip name={file.name} size={file.size} onRemove={reset} />
+            <div className="flex items-center gap-2">
+              {error && <span className="text-xs font-medium text-status-danger">{error}</span>}
+              <MagneticButton onClick={handleSave} disabled={busy || objects.length === 0}>
+                {busy ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    Save &amp; download
+                  </>
+                )}
+              </MagneticButton>
             </div>
-          )}
+          </div>
 
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-brand-brown-dark/10 bg-white p-2">
-            {TOOLS.map((t) => (
-              <button
+            <ToolbarIconButton
+              label="Thumbnails"
+              icon={PanelLeft}
+              active={sidebarOpen}
+              onClick={() => setSidebarOpen((v) => !v)}
+            />
+            <ToolbarDivider />
+
+            {PRIMARY_TOOLS.map((t) => (
+              <ToolbarIconButton
                 key={t.id}
-                type="button"
-                data-hover="true"
-                title={t.label}
-                aria-label={t.label}
-                aria-pressed={activeTool === t.id}
+                label={t.label}
+                icon={t.icon}
+                active={activeTool === t.id}
                 onClick={() => {
                   setSelectedId(null);
                   if (t.id === "image") {
@@ -939,37 +1074,139 @@ export default function EditPdfPage() {
                     setActiveTool(t.id);
                   }
                 }}
-                className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
-                  activeTool === t.id ? "bg-brand-blue-deep text-white" : "text-brand-brown-dark/70 hover:bg-brand-cream"
-                }`}
-              >
-                <t.icon size={16} />
-              </button>
+              />
             ))}
             <input ref={imageInputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleImageSelected} />
 
+            {STAMP_TOOLS.map((t) => (
+              <ToolbarIconButton
+                key={t.id}
+                label={t.label}
+                icon={t.icon}
+                active={activeTool === t.id}
+                onClick={() => {
+                  setSelectedId(null);
+                  setActiveTool(t.id);
+                }}
+              />
+            ))}
+
+            <ToolbarIconButton
+              label="Sign"
+              icon={PenTool}
+              active={signOpen}
+              onClick={() => {
+                setSelectedId(null);
+                setActiveTool("select");
+                setSignOpen(true);
+              }}
+            />
+
+            <ToolbarDivider />
+
+            <div className="relative">
+              <ToolbarIconButton
+                label="More tools"
+                icon={MoreHorizontal}
+                active={moreToolsOpen || MORE_TOOLS.some((t) => t.id === activeTool)}
+                onClick={() => {
+                  setMoreToolsOpen((v) => !v);
+                  setPagesMenuOpen(false);
+                }}
+              />
+              {moreToolsOpen && (
+                <div className="absolute left-0 top-11 z-20 w-44 rounded-xl border border-brand-brown-dark/10 bg-white p-1.5 shadow-lg">
+                  {MORE_TOOLS.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      data-hover="true"
+                      onClick={() => {
+                        setSelectedId(null);
+                        setActiveTool(t.id);
+                        setMoreToolsOpen(false);
+                      }}
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors ${
+                        activeTool === t.id ? "bg-brand-blue/10 text-brand-blue-deep" : "text-brand-brown-dark hover:bg-brand-cream"
+                      }`}
+                    >
+                      <t.icon size={15} />
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <ToolbarIconButton
+                label="Pages"
+                icon={Files}
+                active={pagesMenuOpen}
+                onClick={() => {
+                  setPagesMenuOpen((v) => !v);
+                  setMoreToolsOpen(false);
+                }}
+              />
+              {pagesMenuOpen && (
+                <div className="absolute left-0 top-11 z-20 w-56 rounded-xl border border-brand-brown-dark/10 bg-white p-1.5 shadow-lg">
+                  <button
+                    type="button"
+                    data-hover="true"
+                    onClick={() => {
+                      setPendingPageOp("rotate");
+                      setPagesMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-brand-brown-dark hover:bg-brand-cream"
+                  >
+                    <RotateCw size={15} />
+                    Rotate this page
+                  </button>
+                  <button
+                    type="button"
+                    data-hover="true"
+                    onClick={() => {
+                      setPendingPageOp("insertAfter");
+                      setPagesMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-brand-brown-dark hover:bg-brand-cream"
+                  >
+                    <FilePlus2 size={15} />
+                    Insert blank page after
+                  </button>
+                  <button
+                    type="button"
+                    data-hover="true"
+                    onClick={() => {
+                      setPendingPageOp("duplicate");
+                      setPagesMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-brand-brown-dark hover:bg-brand-cream"
+                  >
+                    <Copy size={15} />
+                    Duplicate this page
+                  </button>
+                  <button
+                    type="button"
+                    data-hover="true"
+                    disabled={pageCount <= 1}
+                    onClick={() => {
+                      setPendingPageOp("delete");
+                      setPagesMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-status-danger hover:bg-status-danger/10 disabled:opacity-40"
+                  >
+                    <Trash2 size={15} />
+                    Delete this page
+                  </button>
+                </div>
+              )}
+            </div>
+
             <span className="mx-1 h-6 w-px bg-brand-brown-dark/10" />
 
-            <button
-              type="button"
-              data-hover="true"
-              title="Undo"
-              disabled={!canUndo}
-              onClick={undo}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-brand-brown-dark/70 hover:bg-brand-cream disabled:opacity-30"
-            >
-              <Undo2 size={16} />
-            </button>
-            <button
-              type="button"
-              data-hover="true"
-              title="Redo"
-              disabled={!canRedo}
-              onClick={redo}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-brand-brown-dark/70 hover:bg-brand-cream disabled:opacity-30"
-            >
-              <Redo2 size={16} />
-            </button>
+            <ToolbarIconButton label="Undo" icon={Undo2} disabled={!canUndo} onClick={undo} />
+            <ToolbarIconButton label="Redo" icon={Redo2} disabled={!canRedo} onClick={redo} />
             <button
               type="button"
               data-hover="true"
@@ -980,13 +1217,13 @@ export default function EditPdfPage() {
                 commit(objectsRef.current.filter((o) => o.id !== selected.id));
                 setSelectedId(null);
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-status-danger hover:bg-status-danger/10 disabled:text-brand-brown-dark/30 disabled:hover:bg-transparent"
+              className="flex h-10 w-10 flex-col items-center justify-center gap-0.5 rounded-xl text-status-danger hover:bg-status-danger/10 disabled:text-brand-brown-dark/30 disabled:hover:bg-transparent"
             >
               <Trash2 size={16} />
             </button>
           </div>
 
-          {/* Property panel */}
+          {/* Contextual formatting toolbar — floats visually above the canvas, matching the selected object's controls */}
           <PropertyPanel activeTool={activeTool} selected={selected} style={style} setStyle={setStyle} updateSelected={updateSelected} />
 
           {activeTool === "editText" && scannedPages[pageIndex] && !ocrRunsByPage[pageIndex] && (
@@ -1047,331 +1284,474 @@ export default function EditPdfPage() {
           )}
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-            <EditPageThumbRail
-              fileBuffer={buffer}
-              pageCount={pageCount}
-              activeIndex={pageIndex}
-              onSelect={setPageIndex}
-            />
-
-            <div
-              ref={previewRef}
-              onClick={handleCanvasClick}
-              onPointerDown={handleCanvasPointerDown}
-              className={`relative mx-auto overflow-hidden rounded-xl border border-brand-brown-dark/10 bg-white shadow-sm ${
-                activeTool === "select" ? "" : "cursor-crosshair"
-              }`}
-              style={{
-                width: PREVIEW_WIDTH,
-                maxWidth: "100%",
-                aspectRatio: pageSizePt.width ? `${pageSizePt.width} / ${pageSizePt.height}` : undefined,
-                touchAction: "none",
-              }}
-            >
-              <div ref={canvasHost} className="absolute inset-0" />
-
-            {/* SVG overlay for lines, arrows, and freehand strokes */}
-            <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${PREVIEW_WIDTH} ${previewHeight}`}>
-              {pageObjects.map((o) => {
-                if (o.type === "shape" && isLineShape(o)) {
-                  const x1 = o.x1Ratio * PREVIEW_WIDTH;
-                  const y1 = o.y1Ratio * previewHeight;
-                  const x2 = o.x2Ratio * PREVIEW_WIDTH;
-                  const y2 = o.y2Ratio * previewHeight;
-                  const angle = Math.atan2(y2 - y1, x2 - x1);
-                  const wingLen = 10;
-                  const wingSpread = 0.4363;
-                  return (
-                    <g key={o.id} opacity={o.opacity}>
-                      <line
-                        x1={x1}
-                        y1={y1}
-                        x2={x2}
-                        y2={y2}
-                        stroke={cssColor(o.strokeColor)}
-                        strokeWidth={o.strokeWidth}
-                        strokeLinecap="round"
-                        className="pointer-events-auto cursor-move"
-                        onPointerDown={(e) => beginObjectDrag(e, o)}
-                      />
-                      {o.kind === "arrow" && (
-                        <>
-                          <line
-                            x1={x2}
-                            y1={y2}
-                            x2={x2 - wingLen * Math.cos(angle - wingSpread)}
-                            y2={y2 - wingLen * Math.sin(angle - wingSpread)}
-                            stroke={cssColor(o.strokeColor)}
-                            strokeWidth={o.strokeWidth}
-                            strokeLinecap="round"
-                          />
-                          <line
-                            x1={x2}
-                            y1={y2}
-                            x2={x2 - wingLen * Math.cos(angle + wingSpread)}
-                            y2={y2 - wingLen * Math.sin(angle + wingSpread)}
-                            stroke={cssColor(o.strokeColor)}
-                            strokeWidth={o.strokeWidth}
-                            strokeLinecap="round"
-                          />
-                        </>
-                      )}
-                      {selectedId === o.id && (
-                        <>
-                          <circle cx={x1} cy={y1} r={5} fill="white" stroke={cssColor(BLUE)} strokeWidth={2} className="pointer-events-auto cursor-move" onPointerDown={(e) => beginResizeLineEndpoint(e, o.id, "x1y1")} />
-                          <circle cx={x2} cy={y2} r={5} fill="white" stroke={cssColor(BLUE)} strokeWidth={2} className="pointer-events-auto cursor-move" onPointerDown={(e) => beginResizeLineEndpoint(e, o.id, "x2y2")} />
-                        </>
-                      )}
-                    </g>
-                  );
-                }
-                if (o.type === "draw") {
-                  const points = o.points.map((p) => `${p.x * PREVIEW_WIDTH},${p.y * previewHeight}`).join(" ");
-                  return (
-                    <polyline
-                      key={o.id}
-                      points={points}
-                      fill="none"
-                      stroke={cssColor(o.strokeColor)}
-                      strokeWidth={o.strokeWidth}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="pointer-events-auto cursor-move"
-                      onPointerDown={(e) => beginObjectDrag(e, o)}
-                    />
-                  );
-                }
-                return null;
-              })}
-            </svg>
-
-            {activeTool === "editText" &&
-              currentPageRuns
-                .filter((run) => !pageObjects.some((o) => o.id === run.id))
-                .map((run) => (
-                  <div
-                    key={run.id}
-                    data-hover="true"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // eslint-disable-next-line react-hooks/refs -- runs only from this click handler, same as the identical call a few lines below that isn't flagged; startEditingRun's ref reads never happen during render.
-                      startEditingRun(run);
-                    }}
-                    title={
-                      run.source === "ocr"
-                        ? "Recognized via OCR — click to edit, and please double-check this text"
-                        : "Click to edit this text"
-                    }
-                    className={`absolute cursor-text rounded-sm border border-dashed border-transparent ${
-                      run.source === "ocr" ? "hover:border-amber-500/70 hover:bg-amber-400/10" : "hover:border-brand-blue/60 hover:bg-brand-blue/5"
-                    }`}
-                    style={{
-                      left: run.xRatio * PREVIEW_WIDTH,
-                      top: run.yRatio * previewHeight,
-                      width: run.wRatio * PREVIEW_WIDTH,
-                      height: run.hRatio * previewHeight,
-                    }}
-                  />
-                ))}
-
-            {pageObjects.map((o) => {
-              if (o.type === "textEdit") {
-                if (textEditor && textEditor.id === o.id) return null;
-                const matchingRun = currentPageRuns.find((r) => r.id === o.id);
-                return (
-                  <div
-                    key={o.id}
-                    data-hover="true"
-                    onPointerDown={(e) => beginObjectDrag(e, o)}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      if (matchingRun) startEditingRun(matchingRun);
-                    }}
-                    className={`group absolute flex cursor-move touch-none select-none items-end overflow-hidden whitespace-pre px-px ${
-                      selectedId === o.id ? "outline outline-2 outline-brand-blue" : ""
-                    }`}
-                    style={{
-                      left: o.xRatio * PREVIEW_WIDTH,
-                      top: o.yRatio * previewHeight,
-                      width: o.wRatio * PREVIEW_WIDTH,
-                      height: o.hRatio * previewHeight,
-                      backgroundColor: cssColor(o.backgroundColor),
-                      fontSize: o.fontSize * previewScale,
-                      fontFamily: FONT_STACKS[o.fontFamily],
-                      fontWeight: o.bold ? 700 : 400,
-                      fontStyle: o.italic ? "italic" : "normal",
-                      color: cssColor(o.color),
-                      lineHeight: 1,
-                    }}
-                  >
-                    {o.text}
-                  </div>
-                );
-              }
-
-              if (o.type === "text") {
-                if (textEditor && textEditor.id === o.id) return null;
-                return (
-                  <div
-                    key={o.id}
-                    data-hover="true"
-                    onPointerDown={(e) => beginObjectDrag(e, o)}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      startEditingText(o);
-                    }}
-                    className={`group absolute cursor-move touch-none select-none whitespace-pre rounded px-1 ${
-                      selectedId === o.id ? "outline outline-2 outline-brand-blue" : ""
-                    }`}
-                    style={{
-                      left: o.xRatio * PREVIEW_WIDTH,
-                      top: o.yRatio * previewHeight,
-                      fontSize: o.fontSize * previewScale,
-                      fontFamily: FONT_STACKS[o.fontFamily],
-                      fontWeight: o.bold ? 700 : 400,
-                      fontStyle: o.italic ? "italic" : "normal",
-                      color: cssColor(o.color),
-                      lineHeight: 1.25,
-                    }}
-                  >
-                    {o.text}
-                  </div>
-                );
-              }
-
-              if (o.type === "image") {
-                return (
-                  <div
-                    key={o.id}
-                    data-hover="true"
-                    onPointerDown={(e) => beginObjectDrag(e, o)}
-                    className={`group absolute cursor-move touch-none select-none ${selectedId === o.id ? "outline outline-2 outline-brand-blue" : ""}`}
-                    style={{
-                      left: o.xRatio * PREVIEW_WIDTH,
-                      top: o.yRatio * previewHeight,
-                      width: o.wRatio * PREVIEW_WIDTH,
-                      height: o.hRatio * previewHeight,
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- data URL, not an optimizable static asset */}
-                    <img src={o.dataUrl} alt="" className="h-full w-full object-fill" draggable={false} />
-                    {selectedId === o.id && (
-                      <div
-                        onPointerDown={(e) => beginResizeBox(e, o.id)}
-                        className="absolute -bottom-1.5 -right-1.5 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-white bg-brand-blue-deep"
-                      />
-                    )}
-                  </div>
-                );
-              }
-
-              if (o.type === "shape" && isBoxShape(o)) {
-                const isPlain = o.kind === "highlight" || o.kind === "cover" || o.kind === "redact";
-                return (
-                  <div
-                    key={o.id}
-                    data-hover="true"
-                    onPointerDown={(e) => beginObjectDrag(e, o)}
-                    className={`group absolute flex cursor-move touch-none select-none items-center justify-center ${
-                      selectedId === o.id ? "outline outline-2 outline-brand-blue" : o.kind === "redact" ? "outline outline-1 outline-dashed outline-status-danger" : ""
-                    }`}
-                    style={{
-                      left: o.xRatio * PREVIEW_WIDTH,
-                      top: o.yRatio * previewHeight,
-                      width: o.wRatio * PREVIEW_WIDTH,
-                      height: o.hRatio * previewHeight,
-                      backgroundColor: o.fillColor ? cssColor(o.fillColor, o.opacity) : "transparent",
-                      border: !isPlain && o.strokeWidth > 0 ? `${o.strokeWidth}px solid ${cssColor(o.strokeColor, o.opacity)}` : undefined,
-                      borderRadius: o.kind === "ellipse" ? "50%" : undefined,
-                    }}
-                  >
-                    {o.kind === "redact" && o.hRatio * previewHeight > 12 && (
-                      <span className="pointer-events-none select-none text-[9px] font-bold uppercase tracking-wide text-white/70">
-                        Redact
-                      </span>
-                    )}
-                    {selectedId === o.id && (
-                      <div
-                        onPointerDown={(e) => beginResizeBox(e, o.id)}
-                        className="absolute -bottom-1.5 -right-1.5 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-white bg-brand-blue-deep"
-                      />
-                    )}
-                  </div>
-                );
-              }
-              return null;
-            })}
-
-            {textEditor && textEditor.pageIndex === pageIndex && (
-              <textarea
-                autoFocus
-                value={textEditor.text}
-                onChange={(e) => setTextEditor({ ...textEditor, text: e.target.value })}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                onBlur={commitTextEditor}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    e.currentTarget.blur();
-                  }
-                }}
-                rows={1}
-                className={`absolute z-10 resize-none overflow-hidden rounded border border-brand-blue px-1 outline-none ${
-                  textEditor.runEdit ? "" : "min-w-[40px] bg-white/90"
-                }`}
-                style={
-                  textEditor.runEdit
-                    ? {
-                        left: textEditor.xRatio * PREVIEW_WIDTH,
-                        top: textEditor.yRatio * previewHeight,
-                        width: textEditor.runEdit.wRatio * PREVIEW_WIDTH,
-                        height: textEditor.runEdit.hRatio * previewHeight,
-                        fontSize: textEditor.runEdit.fontSizePt * previewScale,
-                        fontFamily: FONT_STACKS[textEditor.runEdit.fontFamily],
-                        fontWeight: textEditor.runEdit.bold ? 700 : 400,
-                        fontStyle: textEditor.runEdit.italic ? "italic" : "normal",
-                        color: cssColor(textEditor.runEdit.color),
-                        backgroundColor: cssColor(textEditor.runEdit.backgroundColor),
-                        lineHeight: 1,
-                      }
-                    : {
-                        left: textEditor.xRatio * PREVIEW_WIDTH,
-                        top: textEditor.yRatio * previewHeight,
-                        fontSize: style.fontSize * previewScale,
-                        fontFamily: FONT_STACKS[style.fontFamily],
-                        fontWeight: style.bold ? 700 : 400,
-                        fontStyle: style.italic ? "italic" : "normal",
-                        color: cssColor(style.textColor),
-                        lineHeight: 1.25,
-                      }
-                }
+            {sidebarOpen && (
+              <EditPageThumbRail
+                fileBuffer={buffer}
+                pageCount={pageCount}
+                activeIndex={pageIndex}
+                onSelect={setPageIndex}
               />
-              )}
+            )}
+
+            <div className="mx-auto flex-1 overflow-auto">
+              <div
+                ref={previewRef}
+                onClick={handleCanvasClick}
+                onPointerDown={handleCanvasPointerDown}
+                className={`relative mx-auto overflow-hidden rounded-xl border border-brand-brown-dark/10 bg-white shadow-sm ${
+                  activeTool === "select" ? "" : "cursor-crosshair"
+                }`}
+                style={{
+                  width: displayWidth,
+                  maxWidth: "100%",
+                  aspectRatio: pageSizePt.width ? `${pageSizePt.width} / ${pageSizePt.height}` : undefined,
+                  touchAction: "none",
+                }}
+              >
+                {/* Laid out at the unscaled preview size, then visually scaled as one unit — every ratio->pixel
+                    calculation below stays in that unscaled space, so zoom needed no changes to any of it. */}
+                <div
+                  className="absolute left-0 top-0"
+                  style={{ width: PREVIEW_WIDTH, height: previewHeight, transform: `scale(${zoom})`, transformOrigin: "top left" }}
+                >
+                  <div ref={canvasHost} className="absolute inset-0" />
+
+                  {/* SVG overlay for lines, arrows, and freehand strokes */}
+                  <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${PREVIEW_WIDTH} ${previewHeight}`}>
+                    {pageObjects.map((o) => {
+                      if (o.type === "shape" && isLineShape(o)) {
+                        const x1 = o.x1Ratio * PREVIEW_WIDTH;
+                        const y1 = o.y1Ratio * previewHeight;
+                        const x2 = o.x2Ratio * PREVIEW_WIDTH;
+                        const y2 = o.y2Ratio * previewHeight;
+                        const angle = Math.atan2(y2 - y1, x2 - x1);
+                        const wingLen = 10;
+                        const wingSpread = 0.4363;
+                        return (
+                          <g key={o.id} opacity={o.opacity}>
+                            <line
+                              x1={x1}
+                              y1={y1}
+                              x2={x2}
+                              y2={y2}
+                              stroke={cssColor(o.strokeColor)}
+                              strokeWidth={o.strokeWidth}
+                              strokeLinecap="round"
+                              className="pointer-events-auto cursor-move"
+                              onPointerDown={(e) => beginObjectDrag(e, o)}
+                            />
+                            {o.kind === "arrow" && (
+                              <>
+                                <line
+                                  x1={x2}
+                                  y1={y2}
+                                  x2={x2 - wingLen * Math.cos(angle - wingSpread)}
+                                  y2={y2 - wingLen * Math.sin(angle - wingSpread)}
+                                  stroke={cssColor(o.strokeColor)}
+                                  strokeWidth={o.strokeWidth}
+                                  strokeLinecap="round"
+                                />
+                                <line
+                                  x1={x2}
+                                  y1={y2}
+                                  x2={x2 - wingLen * Math.cos(angle + wingSpread)}
+                                  y2={y2 - wingLen * Math.sin(angle + wingSpread)}
+                                  stroke={cssColor(o.strokeColor)}
+                                  strokeWidth={o.strokeWidth}
+                                  strokeLinecap="round"
+                                />
+                              </>
+                            )}
+                            {selectedId === o.id && (
+                              <>
+                                <circle cx={x1} cy={y1} r={5} fill="white" stroke={cssColor(BLUE)} strokeWidth={2} className="pointer-events-auto cursor-move" onPointerDown={(e) => beginResizeLineEndpoint(e, o.id, "x1y1")} />
+                                <circle cx={x2} cy={y2} r={5} fill="white" stroke={cssColor(BLUE)} strokeWidth={2} className="pointer-events-auto cursor-move" onPointerDown={(e) => beginResizeLineEndpoint(e, o.id, "x2y2")} />
+                              </>
+                            )}
+                          </g>
+                        );
+                      }
+                      if (o.type === "draw") {
+                        const points = o.points.map((p) => `${p.x * PREVIEW_WIDTH},${p.y * previewHeight}`).join(" ");
+                        return (
+                          <polyline
+                            key={o.id}
+                            points={points}
+                            fill="none"
+                            stroke={cssColor(o.strokeColor)}
+                            strokeWidth={o.strokeWidth}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="pointer-events-auto cursor-move"
+                            onPointerDown={(e) => beginObjectDrag(e, o)}
+                          />
+                        );
+                      }
+                      return null;
+                    })}
+                  </svg>
+
+                  {activeTool === "editText" &&
+                    currentPageRuns
+                      .filter((run) => !pageObjects.some((o) => o.id === run.id))
+                      .map((run) => (
+                        <div
+                          key={run.id}
+                          data-hover="true"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // eslint-disable-next-line react-hooks/refs -- runs only from this click handler, same as the identical call a few lines below that isn't flagged; startEditingRun's ref reads never happen during render.
+                            startEditingRun(run);
+                          }}
+                          title={
+                            run.source === "ocr"
+                              ? "Recognized via OCR — click to edit, and please double-check this text"
+                              : "Click to edit this text"
+                          }
+                          className={`absolute cursor-text rounded-sm border border-dashed border-transparent ${
+                            run.source === "ocr" ? "hover:border-amber-500/70 hover:bg-amber-400/10" : "hover:border-brand-blue/60 hover:bg-brand-blue/5"
+                          }`}
+                          style={{
+                            left: run.xRatio * PREVIEW_WIDTH,
+                            top: run.yRatio * previewHeight,
+                            width: run.wRatio * PREVIEW_WIDTH,
+                            height: run.hRatio * previewHeight,
+                          }}
+                        />
+                      ))}
+
+                  {pageObjects.map((o) => {
+                    if (o.type === "textEdit") {
+                      if (textEditor && textEditor.id === o.id) return null;
+                      const matchingRun = currentPageRuns.find((r) => r.id === o.id);
+                      return (
+                        <div
+                          key={o.id}
+                          data-hover="true"
+                          onPointerDown={(e) => beginObjectDrag(e, o)}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            if (matchingRun) startEditingRun(matchingRun);
+                          }}
+                          className={`group absolute flex cursor-move touch-none select-none items-end overflow-hidden whitespace-pre px-px ${
+                            selectedId === o.id ? "outline outline-2 outline-brand-blue" : ""
+                          }`}
+                          style={{
+                            left: o.xRatio * PREVIEW_WIDTH,
+                            top: o.yRatio * previewHeight,
+                            width: o.wRatio * PREVIEW_WIDTH,
+                            height: o.hRatio * previewHeight,
+                            backgroundColor: cssColor(o.backgroundColor),
+                            fontSize: o.fontSize * previewScale,
+                            fontFamily: FONT_STACKS[o.fontFamily],
+                            fontWeight: o.bold ? 700 : 400,
+                            fontStyle: o.italic ? "italic" : "normal",
+                            color: cssColor(o.color),
+                            lineHeight: 1,
+                          }}
+                        >
+                          {o.text}
+                        </div>
+                      );
+                    }
+
+                    if (o.type === "text") {
+                      if (textEditor && textEditor.id === o.id) return null;
+                      return (
+                        <div
+                          key={o.id}
+                          data-hover="true"
+                          onPointerDown={(e) => beginObjectDrag(e, o)}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            startEditingText(o);
+                          }}
+                          className={`group absolute cursor-move touch-none select-none whitespace-pre rounded px-1 ${
+                            selectedId === o.id ? "outline outline-2 outline-brand-blue" : ""
+                          }`}
+                          style={{
+                            left: o.xRatio * PREVIEW_WIDTH,
+                            top: o.yRatio * previewHeight,
+                            fontSize: o.fontSize * previewScale,
+                            fontFamily: FONT_STACKS[o.fontFamily],
+                            fontWeight: o.bold ? 700 : 400,
+                            fontStyle: o.italic ? "italic" : "normal",
+                            color: cssColor(o.color),
+                            lineHeight: 1.25,
+                          }}
+                        >
+                          {o.text}
+                        </div>
+                      );
+                    }
+
+                    if (o.type === "image") {
+                      return (
+                        <div
+                          key={o.id}
+                          data-hover="true"
+                          onPointerDown={(e) => beginObjectDrag(e, o)}
+                          className={`group absolute cursor-move touch-none select-none ${selectedId === o.id ? "outline outline-2 outline-brand-blue" : ""}`}
+                          style={{
+                            left: o.xRatio * PREVIEW_WIDTH,
+                            top: o.yRatio * previewHeight,
+                            width: o.wRatio * PREVIEW_WIDTH,
+                            height: o.hRatio * previewHeight,
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element -- data URL, not an optimizable static asset */}
+                          <img src={o.dataUrl} alt="" className="h-full w-full object-fill" draggable={false} />
+                          {selectedId === o.id && (
+                            <div
+                              onPointerDown={(e) => beginResizeBox(e, o.id)}
+                              className="absolute -bottom-1.5 -right-1.5 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-white bg-brand-blue-deep"
+                            />
+                          )}
+                        </div>
+                      );
+                    }
+
+                    if (o.type === "shape" && isBoxShape(o)) {
+                      const isPlain = o.kind === "highlight" || o.kind === "cover" || o.kind === "redact";
+                      return (
+                        <div
+                          key={o.id}
+                          data-hover="true"
+                          onPointerDown={(e) => beginObjectDrag(e, o)}
+                          className={`group absolute flex cursor-move touch-none select-none items-center justify-center ${
+                            selectedId === o.id ? "outline outline-2 outline-brand-blue" : o.kind === "redact" ? "outline outline-1 outline-dashed outline-status-danger" : ""
+                          }`}
+                          style={{
+                            left: o.xRatio * PREVIEW_WIDTH,
+                            top: o.yRatio * previewHeight,
+                            width: o.wRatio * PREVIEW_WIDTH,
+                            height: o.hRatio * previewHeight,
+                            backgroundColor: o.fillColor ? cssColor(o.fillColor, o.opacity) : "transparent",
+                            border: !isPlain && o.strokeWidth > 0 ? `${o.strokeWidth}px solid ${cssColor(o.strokeColor, o.opacity)}` : undefined,
+                            borderRadius: o.kind === "ellipse" ? "50%" : undefined,
+                          }}
+                        >
+                          {o.kind === "redact" && o.hRatio * previewHeight > 12 && (
+                            <span className="pointer-events-none select-none text-[9px] font-bold uppercase tracking-wide text-white/70">
+                              Redact
+                            </span>
+                          )}
+                          {selectedId === o.id && (
+                            <div
+                              onPointerDown={(e) => beginResizeBox(e, o.id)}
+                              className="absolute -bottom-1.5 -right-1.5 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-white bg-brand-blue-deep"
+                            />
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  {textEditor && textEditor.pageIndex === pageIndex && (
+                    <textarea
+                      autoFocus
+                      value={textEditor.text}
+                      onChange={(e) => setTextEditor({ ...textEditor, text: e.target.value })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                      onBlur={commitTextEditor}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      rows={1}
+                      className={`absolute z-10 resize-none overflow-hidden rounded border border-brand-blue px-1 outline-none ${
+                        textEditor.runEdit ? "" : "min-w-[40px] bg-white/90"
+                      }`}
+                      style={
+                        textEditor.runEdit
+                          ? {
+                              left: textEditor.xRatio * PREVIEW_WIDTH,
+                              top: textEditor.yRatio * previewHeight,
+                              width: textEditor.runEdit.wRatio * PREVIEW_WIDTH,
+                              height: textEditor.runEdit.hRatio * previewHeight,
+                              fontSize: textEditor.runEdit.fontSizePt * previewScale,
+                              fontFamily: FONT_STACKS[textEditor.runEdit.fontFamily],
+                              fontWeight: textEditor.runEdit.bold ? 700 : 400,
+                              fontStyle: textEditor.runEdit.italic ? "italic" : "normal",
+                              color: cssColor(textEditor.runEdit.color),
+                              backgroundColor: cssColor(textEditor.runEdit.backgroundColor),
+                              lineHeight: 1,
+                            }
+                          : {
+                              left: textEditor.xRatio * PREVIEW_WIDTH,
+                              top: textEditor.yRatio * previewHeight,
+                              fontSize: style.fontSize * previewScale,
+                              fontFamily: FONT_STACKS[style.fontFamily],
+                              fontWeight: style.bold ? 700 : 400,
+                              fontStyle: style.italic ? "italic" : "normal",
+                              color: cssColor(style.textColor),
+                              lineHeight: 1.25,
+                            }
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom floating page-nav + zoom pill */}
+              <div className="sticky bottom-4 z-20 mt-4 flex justify-center">
+                <div className="flex items-center gap-1 rounded-full border border-brand-brown-dark/10 bg-white/95 px-2 py-1.5 shadow-lg backdrop-blur">
+                  <span className="px-2 text-xs font-semibold text-brand-brown-dark/70">Page</span>
+                  <span className="text-sm font-semibold tabular-nums text-brand-brown-dark">
+                    {pageIndex + 1}/{pageCount}
+                  </span>
+                  <button
+                    type="button"
+                    data-hover="true"
+                    disabled={pageIndex === 0}
+                    onClick={() => setPageIndex((p) => p - 1)}
+                    aria-label="Previous page"
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-brand-brown-dark/70 hover:bg-brand-cream disabled:opacity-30"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    data-hover="true"
+                    disabled={pageIndex === pageCount - 1}
+                    onClick={() => setPageIndex((p) => p + 1)}
+                    aria-label="Next page"
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-brand-brown-dark/70 hover:bg-brand-cream disabled:opacity-30"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+
+                  <span className="mx-1 h-5 w-px bg-brand-brown-dark/10" />
+
+                  <button
+                    type="button"
+                    data-hover="true"
+                    disabled={zoom <= MIN_ZOOM}
+                    onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))}
+                    aria-label="Zoom out"
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-brand-brown-dark/70 hover:bg-brand-cream disabled:opacity-30"
+                  >
+                    <ZoomOut size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    data-hover="true"
+                    onClick={() => setZoom(1)}
+                    className="w-12 text-center text-xs font-semibold tabular-nums text-brand-brown-dark/70 hover:text-brand-brown-dark"
+                    title="Reset zoom"
+                  >
+                    {Math.round(zoom * 100)}%
+                  </button>
+                  <button
+                    type="button"
+                    data-hover="true"
+                    disabled={zoom >= MAX_ZOOM}
+                    onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)))}
+                    aria-label="Zoom in"
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-brand-brown-dark/70 hover:bg-brand-cream disabled:opacity-30"
+                  >
+                    <ZoomIn size={14} />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
           <p className="text-xs text-brand-brown-dark/70">
             {objects.length} {objects.length === 1 ? "edit" : "edits"} across this PDF. Pick a tool above, click (or
-            drag, for lines/arrows/drawing) on the page — select any edit to move, resize, or delete it.
+            drag, for lines/arrows/drawing) on the page — select any edit to move, resize, or delete it. Zoom is a
+            preview aid only; the exported PDF always keeps the original page size.
           </p>
+        </div>
+      )}
 
-          {error && <p className="text-sm font-medium text-status-danger">{error}</p>}
+      {signOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSignOpen(false)}>
+          <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-white">Add your signature</h2>
+              <button type="button" data-hover="true" onClick={() => setSignOpen(false)} className="text-white/80 hover:text-white" aria-label="Close">
+                <XIcon size={18} />
+              </button>
+            </div>
+            <SignaturePad onCreate={handleSignatureCreated} />
+          </div>
+        </div>
+      )}
 
-          <MagneticButton onClick={handleSave} disabled={busy || objects.length === 0}>
-            {busy ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Saving…
-              </>
-            ) : (
-              "Save & download"
-            )}
-          </MagneticButton>
+      {pendingPageOp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !pageOpBusy && setPendingPageOp(null)}>
+          <div className="w-full max-w-sm rounded-2xl border border-brand-brown-dark/10 bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-base font-bold text-brand-brown-dark">{PAGE_OP_LABEL[pendingPageOp]}?</h2>
+            <p className="mt-2 text-sm text-brand-brown-dark/70">
+              This changes the document&apos;s page structure, so any edits placed so far will be cleared first —
+              download what you have now if you want to keep it.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                data-hover="true"
+                disabled={pageOpBusy}
+                onClick={() => setPendingPageOp(null)}
+                className="rounded-full px-4 py-2 text-sm font-semibold text-brand-brown-dark/70 hover:bg-brand-cream"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-hover="true"
+                disabled={pageOpBusy}
+                onClick={() => runPageOp(pendingPageOp)}
+                className="inline-flex items-center gap-2 rounded-full bg-brand-blue-deep px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {pageOpBusy && <Loader2 size={14} className="animate-spin" />}
+                Continue
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       <PrivacyNote />
     </ToolShell>
+  );
+}
+
+function ToolbarDivider() {
+  return <span className="mx-1 h-6 w-px bg-brand-brown-dark/10" />;
+}
+
+function ToolbarIconButton({
+  label,
+  icon: Icon,
+  active = false,
+  disabled = false,
+  onClick,
+}: {
+  label: string;
+  icon: typeof MousePointer2;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      data-hover="true"
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex h-10 w-10 flex-col items-center justify-center gap-0.5 rounded-xl transition-colors disabled:opacity-30 ${
+        active ? "bg-brand-blue-deep text-white" : "text-brand-brown-dark/70 hover:bg-brand-cream"
+      }`}
+    >
+      <Icon size={16} />
+    </button>
   );
 }
 
@@ -1418,7 +1798,7 @@ function PropertyPanel({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-brown-dark/10 bg-brand-cream/50 p-3 text-xs">
+    <div className="flex flex-wrap items-center gap-3 rounded-full border border-brand-brown-dark/10 bg-white px-4 py-2 text-xs shadow-sm">
       {isText && (
         <>
           <select

@@ -14,6 +14,8 @@ type ToolShellProps = {
   children: ReactNode;
   /** Mail Merge has its own, more specific per-plan limits — it opts out of this generic gate. */
   skipUsageGate?: boolean;
+  /** Opts into a wider content column for tools whose workspace (e.g. a full editing canvas) needs more than the default reading-width layout. Every other tool keeps the default. */
+  wide?: boolean;
 };
 
 // Re-exported here so a tool picks up progress reporting by extending the
@@ -22,7 +24,7 @@ export { useToolBusy } from "@/lib/tools/use-tool-busy";
 
 type GateState = "checking" | "allowed" | "blocked";
 
-export function ToolShell({ icon: Icon, title, description, children, skipUsageGate = false }: ToolShellProps) {
+export function ToolShell({ icon: Icon, title, description, children, skipUsageGate = false, wide = false }: ToolShellProps) {
   const [gate, setGate] = useState<GateState>(skipUsageGate ? "allowed" : "checking");
   const [signedIn, setSignedIn] = useState(false);
 
@@ -69,7 +71,7 @@ export function ToolShell({ icon: Icon, title, description, children, skipUsageG
   return (
     <div className="min-h-[100svh] px-6 pb-28 pt-32 lg:px-10">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <div className="mx-auto max-w-4xl">
+      <div className={`mx-auto ${wide ? "max-w-[1400px]" : "max-w-4xl"}`}>
         <Link
           href="/tools"
           data-hover="true"
