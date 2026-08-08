@@ -217,8 +217,17 @@ def _font_size(chars):
 
 
 def _horizontal_alignment(chars, bbox):
-    """Recovers left/center/right from where the glyphs actually sit in the cell."""
+    """Recovers left/center/right from where the glyphs actually sit in the cell.
+
+    Tolerances scale with cell width because a 3pt imbalance means something
+    very different in a 40pt cell than in a 400pt one. Balanced gaps alone
+    aren't enough to call something centered — text that simply fills its cell
+    also has small gaps on both sides — so the gaps must additionally be wide
+    enough to look deliberate."""
     if not chars or not bbox:
+        return None
+    width = bbox[2] - bbox[0]
+    if width <= 0:
         return None
     text_x0 = min(c["x0"] for c in chars)
     text_x1 = max(c["x1"] for c in chars)
@@ -226,10 +235,13 @@ def _horizontal_alignment(chars, bbox):
     right_gap = bbox[2] - text_x1
     if left_gap < 0 or right_gap < 0:
         return None
-    if right_gap < left_gap - 3:
-        return "right"
-    if left_gap > 4 and abs(left_gap - right_gap) <= 3:
+
+    tolerance = max(2.0, width * 0.03)
+    deliberate_padding = max(3.0, width * 0.06)
+    if abs(left_gap - right_gap) <= tolerance and min(left_gap, right_gap) >= deliberate_padding:
         return "center"
+    if right_gap + tolerance < left_gap:
+        return "right"
     return "left"
 
 
@@ -278,45 +290,67 @@ def _number_format_for(text: str, is_currency: bool, is_percent: bool) -> str:
 
 
 _POINTS_TO_PIXELS = 96 / 72  # Excel positions drawings in pixels at 96dpi
+_ARTWORK_RENDER_DPI = 200
 
 
-def _add_page_images(ws, pdf_path, page_number, table):
-    """Carries embedded artwork (a letterhead logo, a stamp) across to the
-    sheet, anchored to whichever cell it sits on top of in the PDF. Best
-    effort by design — a page whose images can't be decoded still converts,
-    it just arrives without them."""
-    if table is None or not table.rows:
-        return
-    row_tops = [r.bbox[1] for r in table.rows if r.bbox]
-    col_starts = sorted({round(c[0], 1) for r in table.rows for c in r.cells if c})
-    if not row_tops or not col_starts:
+def _artwork_rects(mupdf_page):
+    """Regions holding a logo, signature or stamp.
+
+    Raster images are only half the story — company logos and scanned
+    signatures are frequently vector art, which `get_images` never reports.
+    Curve segments are the tell: table ruling and shading are straight lines
+    and axis-aligned rectangles, so a drawing containing a Bezier curve is
+    artwork rather than page furniture."""
+    rects = []
+    try:
+        for drawing in mupdf_page.get_drawings():
+            if any(item[0] == "c" for item in drawing.get("items", ())):
+                rects.append(drawing["rect"])
+    except Exception:  # noqa: BLE001 — fall through to raster images
+        pass
+    try:
+        for xref, *_rest in mupdf_page.get_images(full=True):
+            rects.extend(mupdf_page.get_image_rects(xref))
+    except Exception:  # noqa: BLE001
+        pass
+    return [r for r in rects if r.width > 2 and r.height > 2]
+
+
+def _add_cell_artwork(ws, pdf_path, page_number, cells, row_map):
+    """Renders any cell whose content is artwork rather than text — the
+    letterhead logo, a signature block — and drops it into the matching
+    worksheet cell at its on-page size. Rendering the cell region (instead of
+    lifting the raster out) is what makes this work for vector logos too.
+    Best effort throughout: artwork that won't render is skipped, never fatal."""
+    candidates = [c for c in cells if not (c["text"] or "").strip() and c["row"] in row_map]
+    if not candidates:
         return
 
     try:
         doc = pymupdf.open(pdf_path)
-    except Exception:  # noqa: BLE001 — artwork is a nicety, never a hard failure
+    except Exception:  # noqa: BLE001
         return
     try:
-        page = doc[page_number]
-        for xref, *_rest in page.get_images(full=True):
+        mupdf_page = doc[page_number]
+        art = _artwork_rects(mupdf_page)
+        if not art:
+            return
+        for item in candidates:
             try:
-                rects = page.get_image_rects(xref)
-                if not rects:
+                cell_rect = pymupdf.Rect(*item["bbox"])
+                if cell_rect.is_empty:
                     continue
-                rect = rects[0]
-                pix = pymupdf.Pixmap(doc, xref)
-                if pix.alpha or pix.n > 3:
-                    pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
-                png = pix.tobytes("png")
-
-                row = max(0, sum(1 for t in row_tops if t < rect.y0 - 1) - 1)
-                col = max(0, sum(1 for s in col_starts if s < rect.x0 - 1) - 1)
-
-                image = XLImage(io.BytesIO(png))
-                image.width = max(1, int(rect.width * _POINTS_TO_PIXELS))
-                image.height = max(1, int(rect.height * _POINTS_TO_PIXELS))
-                ws.add_image(image, f"{get_column_letter(col + 1)}{row + 1}")
-            except Exception:  # noqa: BLE001 — skip just this image
+                # Require the artwork to genuinely sit in this cell, so a curve
+                # that merely clips a neighbouring border doesn't drag a render in.
+                if not any((r & cell_rect).get_area() > 0.4 * r.get_area() for r in art):
+                    continue
+                pix = mupdf_page.get_pixmap(clip=cell_rect, dpi=_ARTWORK_RENDER_DPI)
+                image = XLImage(io.BytesIO(pix.tobytes("png")))
+                image.width = max(1, int(cell_rect.width * _POINTS_TO_PIXELS))
+                image.height = max(1, int(cell_rect.height * _POINTS_TO_PIXELS))
+                anchor = f"{get_column_letter(item['col'] + 1)}{row_map[item['row']] + 1}"
+                ws.add_image(image, anchor)
+            except Exception:  # noqa: BLE001 — skip just this cell
                 continue
     finally:
         doc.close()
@@ -364,7 +398,7 @@ def _collect_cells(table):
     return list(placed.values()), len(col_starts)
 
 
-def _style_and_write_table(ws, page, table, ruled: bool):
+def _style_and_write_table(ws, page, table, ruled: bool, pdf_path=None, page_number=0):
     """Writes one detected table into a worksheet, mirroring how the source PDF
     actually looks rather than imposing a house style: cell shading, text
     color, bold/italic and font size are read back out of the PDF, merged
@@ -410,13 +444,15 @@ def _style_and_write_table(ws, page, table, ruled: bool):
             cell.value = num_value
             cell.number_format = _number_format_for(value, is_currency, is_percent)
         else:
-            cell.value = value.replace("\n", " ") if value else None
+            # Line breaks inside a cell are meaningful — a "Ref No / Rev / Date"
+            # block is one cell of three lines, not one long line.
+            cell.value = value or None
 
         align = _horizontal_alignment(chars, bbox) or ("right" if numeric is not None else "left")
         cell.alignment = Alignment(
             horizontal=align,
             vertical="center",
-            wrap_text=len(value) > 60,
+            wrap_text="\n" in value or len(value) > 60,
         )
         cell.font = Font(
             bold=_is_bold(chars),
@@ -464,6 +500,9 @@ def _style_and_write_table(ws, page, table, ruled: bool):
         ws.column_dimensions[get_column_letter(col_index + 1)].width = round(
             max(3.0, min(widths.get(col_index, 10.0), 120.0)), 2
         )
+
+    if pdf_path:
+        _add_cell_artwork(ws, pdf_path, page_number, cells, row_map)
 
 
 @app.post("/convert-to-docx")
@@ -541,9 +580,7 @@ def convert_to_xlsx():
                     sheet_count += 1
                     label = f"Page {page_index + 1}" if len(tables) == 1 else f"Page {page_index + 1} Table {table_index + 1}"
                     ws = add_sheet(label)
-                    _style_and_write_table(ws, page, table, ruled)
-                    if table_index == 0:
-                        _add_page_images(ws, source_path, page_index, table)
+                    _style_and_write_table(ws, page, table, ruled, source_path, page_index)
 
         if sheet_count == 0:
             # No detectable table anywhere, even with the looser strategies
