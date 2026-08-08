@@ -115,11 +115,18 @@ export function ToolShell({ icon: Icon, title, description, children, skipUsageG
               </div>
             </div>
           ) : (
-            <>
-              {children}
-              <ToolOutput />
-            </>
+            children
           )}
+
+          {/*
+            Rendered unconditionally, outside the gate, deliberately. Recording
+            a tool's use is a fire-and-forget request that resolves after the
+            fact — if it flips the gate to "blocked" once someone's quota runs
+            out, that must never take a just-finished file down with it by
+            unmounting this alongside `children`. A run already in flight when
+            the block lands is left to finish rather than cut off too.
+          */}
+          <ToolOutput />
         </div>
       </div>
     </div>
