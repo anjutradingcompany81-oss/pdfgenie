@@ -221,6 +221,33 @@ def _text_color(chars):
     return max(counts.items(), key=lambda kv: kv[1])[0]
 
 
+_FONT_FAMILIES = (
+    ("arial", "Arial"), ("helvetica", "Arial"), ("calibri", "Calibri"),
+    ("timesnewroman", "Times New Roman"), ("times", "Times New Roman"),
+    ("couriernew", "Courier New"), ("courier", "Courier New"),
+    ("verdana", "Verdana"), ("tahoma", "Tahoma"), ("georgia", "Georgia"),
+    ("garamond", "Garamond"), ("cambria", "Cambria"),
+)
+
+
+def _font_name(chars):
+    """The typeface the PDF actually used, so text occupies the same width in
+    the sheet. Left unset when unrecognized — Excel's default is a safer guess
+    than a family the viewer may not have."""
+    counts: dict[str, int] = {}
+    for c in chars:
+        raw = (c.get("fontname") or "").lower()
+        # Subset fonts arrive as "ABCDEF+Arial-BoldMT".
+        raw = raw.split("+")[-1].replace("-", "").replace(" ", "")
+        for needle, family in _FONT_FAMILIES:
+            if needle in raw:
+                counts[family] = counts.get(family, 0) + 1
+                break
+    if not counts:
+        return None
+    return max(counts.items(), key=lambda kv: kv[1])[0]
+
+
 def _font_size(chars):
     sizes = sorted(c["size"] for c in chars if c.get("size"))
     if not sizes:
@@ -370,43 +397,98 @@ def _apply_page_setup(ws, pdf_page, table):
     )
 
 
-def _artwork_rects(mupdf_page):
-    """Regions holding a logo, signature or stamp.
+def _artwork_items(mupdf_page):
+    """(rect, xref, smask) for every logo, signature or stamp on the page.
 
-    Raster images are only half the story — company logos and scanned
-    signatures are frequently vector art, which `get_images` never reports.
-    Curve segments are the tell: table ruling and shading are straight lines
-    and axis-aligned rectangles, so a drawing containing a Bezier curve is
-    artwork rather than page furniture."""
-    rects = []
+    Embedded rasters are reported with the xref they came from so the image
+    itself can be lifted out. Vector artwork carries xref None and has to be
+    rendered instead; `get_images` never reports it, and company logos and
+    scanned signatures are frequently vector. Curve segments are the tell —
+    table ruling and shading are straight lines and axis-aligned rectangles,
+    so a drawing containing a Bezier curve is artwork rather than furniture."""
+    items = []
+    try:
+        for info in mupdf_page.get_images(full=True):
+            xref, smask = info[0], info[1]
+            for rect in mupdf_page.get_image_rects(xref):
+                items.append((rect, xref, smask))
+    except Exception:  # noqa: BLE001 — fall through to vector art
+        pass
     try:
         for drawing in mupdf_page.get_drawings():
             if any(item[0] == "c" for item in drawing.get("items", ())):
-                rects.append(drawing["rect"])
-    except Exception:  # noqa: BLE001 — fall through to raster images
-        pass
-    try:
-        for xref, *_rest in mupdf_page.get_images(full=True):
-            rects.extend(mupdf_page.get_image_rects(xref))
+                items.append((drawing["rect"], None, 0))
     except Exception:  # noqa: BLE001
         pass
-    return [r for r in rects if r.width > 2 and r.height > 2]
+    return [i for i in items if i[0].width > 2 and i[0].height > 2]
 
 
-def _host_cell_for(cells, row_map, rect):
-    """The tightest written cell the artwork sits inside."""
-    cx = (rect.x0 + rect.x1) / 2
-    cy = (rect.y0 + rect.y1) / 2
-    best = None
+def _text_overlaps(mupdf_page, rect):
+    """Whether page text runs through the artwork's box."""
+    try:
+        for word in mupdf_page.get_text("words"):
+            word_rect = pymupdf.Rect(word[:4])
+            area = word_rect.get_area()
+            if area > 0 and (word_rect & rect).get_area() > 0.15 * area:
+                return True
+    except Exception:  # noqa: BLE001
+        return False
+    return False
+
+
+def _artwork_png(doc, mupdf_page, rect, xref, smask):
+    """The artwork's own pixels.
+
+    Rendering that patch of the page is preferred, because it composites
+    transparency, masks and layered images exactly as a viewer would — lifting
+    the raw stream out instead can drop a logo's soft mask and leave it on a
+    black square. The exception is artwork with text running through its box,
+    where a render would bake the surrounding words into the picture and
+    duplicate them on top of the real cells; there the embedded image is
+    extracted directly (recombined with its soft mask when it has one)."""
+    if xref and _text_overlaps(mupdf_page, rect):
+        try:
+            pix = pymupdf.Pixmap(doc, xref)
+            if smask:
+                pix = pymupdf.Pixmap(pix, pymupdf.Pixmap(doc, smask))
+            if pix.colorspace and pix.colorspace.n > 3:  # CMYK has no PNG encoding
+                pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
+            return pix.tobytes("png")
+        except Exception:  # noqa: BLE001 — fall back to rendering the region
+            pass
+    return mupdf_page.get_pixmap(clip=rect, dpi=_ARTWORK_RENDER_DPI).tobytes("png")
+
+
+def _grid_origins(cells, row_map):
+    """Left edge of each column and top edge of each output row, in points."""
+    col_x0: dict[int, float] = {}
+    row_top: dict[int, float] = {}
     for item in cells:
         if item["row"] not in row_map:
             continue
-        x0, top, x1, bottom = item["bbox"]
-        if x0 - 1 <= cx <= x1 + 1 and top - 1 <= cy <= bottom + 1:
-            area = (x1 - x0) * (bottom - top)
-            if best is None or area < best[0]:
-                best = (area, item)
-    return best[1] if best else None
+        x0, top = item["bbox"][0], item["bbox"][1]
+        col = item["col"]
+        row = row_map[item["row"]]
+        col_x0[col] = min(col_x0.get(col, x0), x0)
+        row_top[row] = min(row_top.get(row, top), top)
+    return col_x0, row_top
+
+
+def _anchor_for(col_x0, row_top, rect):
+    """Grid cell and sub-cell offset that place artwork exactly where the PDF has it.
+
+    Anchoring is taken from the artwork's top-left corner against the grid
+    lines, never from the cell it happens to sit in the middle of: a signature
+    straddling two rows belongs to the row its top edge falls in, and pinning
+    it to the row containing its midpoint would drop it a row lower and let it
+    cover the content underneath."""
+    if not col_x0 or not row_top:
+        return None
+    cols = [c for c in sorted(col_x0) if col_x0[c] <= rect.x0 + 1]
+    rows = [r for r in sorted(row_top) if row_top[r] <= rect.y0 + 1]
+    col = cols[-1] if cols else min(col_x0)
+    row = rows[-1] if rows else min(row_top)
+    return col, row, max(0.0, rect.x0 - col_x0[col]), max(0.0, rect.y0 - row_top[row])
 
 
 def _add_cell_artwork(ws, pdf_path, page_number, cells, row_map):
@@ -424,31 +506,32 @@ def _add_cell_artwork(ws, pdf_path, page_number, cells, row_map):
         return
     try:
         mupdf_page = doc[page_number]
-        art = _artwork_rects(mupdf_page)
+        art = _artwork_items(mupdf_page)
         if not art:
             return
+        col_x0, row_top = _grid_origins(cells, row_map)
         page_area = mupdf_page.rect.get_area() or 1.0
         placed = []
-        for rect in art:
+        for rect, xref, smask in art:
             try:
                 if rect.get_area() > 0.5 * page_area:
                     continue  # a full-page scan or background, not a mark
                 # A single logo is frequently two stacked images (art plus its
-                # mask) at identical coordinates — render that spot only once.
+                # mask) at identical coordinates — place that spot only once.
                 if any(abs(rect.x0 - p.x0) < 2 and abs(rect.y0 - p.y0) < 2
                        and abs(rect.x1 - p.x1) < 2 and abs(rect.y1 - p.y1) < 2 for p in placed):
                     continue
-                host = _host_cell_for(cells, row_map, rect)
-                if host is None:
+                anchor = _anchor_for(col_x0, row_top, rect)
+                if anchor is None:
                     continue
-                pix = mupdf_page.get_pixmap(clip=rect, dpi=_ARTWORK_RENDER_DPI)
-                image = XLImage(io.BytesIO(pix.tobytes("png")))
+                col, row, col_off, row_off = anchor
+                image = XLImage(io.BytesIO(_artwork_png(doc, mupdf_page, rect, xref, smask)))
                 image.anchor = OneCellAnchor(
                     _from=AnchorMarker(
-                        col=host["col"],
-                        colOff=int(max(0.0, rect.x0 - host["bbox"][0]) * _EMU_PER_POINT),
-                        row=row_map[host["row"]],
-                        rowOff=int(max(0.0, rect.y0 - host["bbox"][1]) * _EMU_PER_POINT),
+                        col=col,
+                        colOff=int(col_off * _EMU_PER_POINT),
+                        row=row,
+                        rowOff=int(row_off * _EMU_PER_POINT),
                     ),
                     ext=XDRPositiveSize2D(
                         int(rect.width * _EMU_PER_POINT), int(rect.height * _EMU_PER_POINT)
@@ -561,6 +644,7 @@ def _style_and_write_table(ws, page, table, ruled: bool, pdf_path=None, page_num
             wrap_text="\n" in value or len(value) > 60,
         )
         cell.font = Font(
+            name=_font_name(chars),
             bold=_is_bold(chars),
             italic=_is_italic(chars),
             size=_font_size(chars),
